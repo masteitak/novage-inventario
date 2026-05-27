@@ -220,6 +220,10 @@ tr:hover td{background:#fafaf8}
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zm3-4h.01M12 17h.01M15 17h.01"/></svg>
     Ventas Servicios
   </button>
+  <button class="tab" onclick="goPage('insumos',this)">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a4 4 0 00-5.656 0L12 17.2l-1.772-1.772a4 4 0 10-5.656 5.656L12 28.4l7.428-7.316a4 4 0 000-5.656z" transform="scale(.6) translate(8 -2)"/></svg>
+    Insumos Sueroterapia
+  </button>
   <button class="tab" onclick="goPage('contab',this)">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
     Contabilidad
@@ -531,6 +535,76 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 
+<!-- ═══════════════════ INSUMOS SUEROTERAPIA ═══════════════════ -->
+<div class="page" id="page-insumos">
+  <div class="metrics" id="ins-metrics"></div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Insumos clínicos de sueroterapia</span>
+      <button class="btn btn-primary btn-sm" onclick="openAddSupply()">Agregar insumo</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Insumo</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Costo</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="ins-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Consumo clínico registrado</span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Servicio</th><th>Insumos usados</th><th>Costo clínico</th></tr></thead>
+        <tbody id="ins-log-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INSUMO -->
+<div class="modal-bg" id="modal-supply">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-supply-title">Agregar insumo clínico</span>
+      <button class="btn btn-sm" onclick="closeModal('modal-supply')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ms-idx">
+      <div class="form-group"><label class="form-label">Nombre</label><input type="text" id="ms-name"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Categoría</label><select id="ms-cat"><option>Ampolla</option><option>Activo</option><option>Insumo</option></select></div>
+        <div class="form-group"><label class="form-label">Stock</label><input type="number" id="ms-stock" min="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Costo unitario</label><input type="number" id="ms-cost" min="0"></div>
+        <div class="form-group"><label class="form-label">Mínimo alerta</label><input type="number" id="ms-min" min="0" value="2"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Uso clínico</label><input type="text" id="ms-use" placeholder="ej: soporte inmune, energia, antioxidante"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-supply')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSupply()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONSUMO SUERO -->
+<div class="modal-bg" id="modal-suero-uso">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Registrar insumos usados en sueroterapia</span>
+      <button class="btn btn-sm" onclick="closeModal('modal-suero-uso')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="suero-uso-list"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-suero-uso')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmServiceSupplies()">Confirmar consumo</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════ CONTABILIDAD ═══════════════════ -->
 <div class="page" id="page-contab">
   <div class="acc-grid" id="acc-metrics"></div>
@@ -805,6 +879,9 @@ let payMethod = 'redbank';
 let ventas = [];
 let serviceSales = [];
 let transfers = [];
+let supplies = [];
+let supplyUsageLog = [];
+let pendingServicePayload = null;
 let posLocFilter = '';
 let posCatFilter = '';
 
@@ -1339,6 +1416,33 @@ function exportPedidosCSV(){
   a.click();
 }
 
+function finalizeServiceSale(payload, supplyItems=[]){
+  const record = {
+    n: serviceSales.length + 1,
+    fecha: new Date().toLocaleString('es-CL'),
+    empresa: payload.empresa,
+    tipo: 'Servicio',
+    servicio: payload.servicio,
+    metodo: payload.metodo,
+    nota: payload.nota,
+    sub: payload.sub,
+    iva: payload.iva,
+    total: payload.total,
+    supplyItems,
+    clinicalCost: supplyItems.reduce((a,i)=>a+((i.qty||0)*(i.cost||0)),0)
+  };
+  serviceSales.unshift(record);
+  if(supplyItems.length){
+    supplyUsageLog.unshift({fecha:record.fecha, servicio:record.servicio, items:supplyItems, clinicalCost:record.clinicalCost});
+  }
+  document.getElementById('srv-monto').value='';
+  document.getElementById('srv-nota').value='';
+  saveState();
+  renderServicios();
+  renderContab();
+  renderSupplies();
+}
+
 function registrarServicio(){
   const empresa = document.getElementById('srv-empresa').value;
   const servicio = document.getElementById('srv-servicio').value;
@@ -1349,23 +1453,13 @@ function registrarServicio(){
   const afectaIva = empresa === 'Dacez SpA';
   const sub = afectaIva ? monto/1.19 : monto;
   const iva = afectaIva ? monto-sub : 0;
-  serviceSales.unshift({
-    n: serviceSales.length + 1,
-    fecha: new Date().toLocaleString('es-CL'),
-    empresa,
-    tipo: 'Servicio',
-    servicio,
-    metodo,
-    nota,
-    sub,
-    iva,
-    total: monto
-  });
-  document.getElementById('srv-monto').value='';
-  document.getElementById('srv-nota').value='';
-  saveState();
-  renderServicios();
-  renderContab();
+  const payload = {empresa, servicio, metodo, nota, sub, iva, total:monto};
+  if(servicio === 'Sueroterapia'){
+    pendingServicePayload = payload;
+    openSupplyUsageModal();
+    return;
+  }
+  finalizeServiceSale(payload, []);
 }
 
 function renderServicios(){
@@ -1375,7 +1469,7 @@ function renderServicios(){
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">Sin servicios registrados</td></tr>';
     return;
   }
-  tbody.innerHTML = serviceSales.map(s=>`<tr><td style="font-size:11px">${s.fecha}</td><td><span class="badge badge-gray">${s.empresa}</span></td><td>${s.servicio}</td><td>${s.metodo}</td><td>${fmt(s.iva||0)}</td><td style="font-weight:600">${fmt(s.total)}</td><td style="font-size:11px">${s.nota||'—'}</td></tr>`).join('');
+  tbody.innerHTML = serviceSales.map(s=>`<tr><td style="font-size:11px">${s.fecha}</td><td><span class="badge badge-gray">${s.empresa}</span></td><td>${s.servicio}</td><td>${s.metodo}</td><td>${fmt(s.iva||0)}</td><td style="font-weight:600">${fmt(s.total)}</td><td style="font-size:11px">${s.nota||'—'}${s.supplyItems&&s.supplyItems.length?` · insumos: ${s.supplyItems.map(i=>i.name+' x'+i.qty).join(', ')}`:''}</td></tr>`).join('');
 }
 
 // ─── CONTABILIDAD ───
@@ -1383,7 +1477,7 @@ function renderContab(){
   const mf=document.getElementById('acc-filter-pay').value;
   const allRecords = [
     ...ventas.map(v=>({...v, empresa:v.empresa||'Dacez SpA', tipo:v.tipo||'Producto', detalle:v.items.map(i=>i.qty+'× '+i.name).join(', ')})),
-    ...serviceSales.map(s=>({...s, detalle:s.servicio}))
+    ...serviceSales.map(s=>({...s, detalle:s.supplyItems&&s.supplyItems.length ? `${s.servicio} · ${s.supplyItems.map(i=>i.name+' x'+i.qty).join(', ')}` : s.servicio}))
   ].sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
   const list=mf?allRecords.filter(v=>v.metodo===mf):allRecords;
   const totalV=allRecords.reduce((a,v)=>a+v.total,0);
@@ -1410,6 +1504,105 @@ function renderContab(){
     <td>${fmt(v.iva||0)}</td>
     <td style="font-weight:600">${fmt(v.total)}</td>
   </tr>`).join('');
+}
+
+function supplyStatus(s){
+  if((s.stock||0)===0) return '<span class="badge badge-out">Sin stock</span>';
+  if((s.stock||0)<=(s.minstock||0)) return '<span class="badge badge-low">Bajo</span>';
+  return '<span class="badge badge-ok">Disponible</span>';
+}
+function openAddSupply(){
+  if(!requireAdmin('Solo administración puede gestionar insumos clínicos')) return;
+  document.getElementById('modal-supply-title').textContent='Agregar insumo clínico';
+  document.getElementById('ms-idx').value='';
+  ['ms-name','ms-stock','ms-cost','ms-use'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ms-cat').value='Ampolla';
+  document.getElementById('ms-min').value='2';
+  document.getElementById('modal-supply').classList.add('open');
+}
+function editSupply(id){
+  if(!requireAdmin('Solo administración puede gestionar insumos clínicos')) return;
+  const s = supplies.find(x=>x.id===id);
+  if(!s) return;
+  document.getElementById('modal-supply-title').textContent='Editar insumo clínico';
+  document.getElementById('ms-idx').value=id;
+  document.getElementById('ms-name').value=s.name;
+  document.getElementById('ms-cat').value=s.cat;
+  document.getElementById('ms-stock').value=s.stock||0;
+  document.getElementById('ms-cost').value=s.cost||0;
+  document.getElementById('ms-min').value=s.minstock||0;
+  document.getElementById('ms-use').value=s.use||'';
+  document.getElementById('modal-supply').classList.add('open');
+}
+function saveSupply(){
+  if(!requireAdmin('Solo administración puede gestionar insumos clínicos')) return;
+  const idx = document.getElementById('ms-idx').value;
+  const data = {
+    name: document.getElementById('ms-name').value.trim(),
+    cat: document.getElementById('ms-cat').value,
+    stock: parseInt(document.getElementById('ms-stock').value)||0,
+    cost: parseFloat(document.getElementById('ms-cost').value)||0,
+    minstock: parseInt(document.getElementById('ms-min').value)||0,
+    use: document.getElementById('ms-use').value.trim()
+  };
+  if(!data.name){ alert('El nombre es obligatorio'); return; }
+  if(idx!==''){
+    const i = supplies.findIndex(x=>x.id===parseInt(idx));
+    supplies[i] = {...supplies[i], ...data};
+  } else {
+    data.id = supplies.reduce((m,s)=>Math.max(m,s.id||0),-1)+1;
+    supplies.push(data);
+  }
+  closeModal('modal-supply');
+  saveState();
+  renderSupplies();
+}
+function deleteSupply(id){
+  if(!requireAdmin('Solo administración puede gestionar insumos clínicos')) return;
+  const s = supplies.find(x=>x.id===id);
+  if(!s) return;
+  if(!confirm(`¿Eliminar el insumo "${s.name}"?`)) return;
+  supplies = supplies.filter(x=>x.id!==id);
+  saveState();
+  renderSupplies();
+}
+function renderSupplies(){
+  const tbody = document.getElementById('ins-tbody');
+  const log = document.getElementById('ins-log-tbody');
+  const metrics = document.getElementById('ins-metrics');
+  if(!tbody || !log || !metrics) return;
+  const low = supplies.filter(s=>(s.stock||0)>0 && (s.stock||0)<=(s.minstock||0)).length;
+  const zero = supplies.filter(s=>(s.stock||0)===0).length;
+  const totalCost = supplies.reduce((a,s)=>a+((s.stock||0)*(s.cost||0)),0);
+  metrics.innerHTML = `<div class="metric"><div class="metric-label">Insumos clinicos</div><div class="metric-value">${supplies.length}</div></div><div class="metric"><div class="metric-label">Stock bajo</div><div class="metric-value" style="color:var(--amber)">${low}</div></div><div class="metric"><div class="metric-label">Sin stock</div><div class="metric-value" style="color:var(--red)">${zero}</div></div><div class="metric"><div class="metric-label">Valor clinico</div><div class="metric-value" style="font-size:16px">${fmt(totalCost)}</div></div>`;
+  tbody.innerHTML = supplies.length ? supplies.map(s=>`<tr><td style="font-weight:500">${s.name}</td><td>${s.cat}</td><td>${s.stock||0}</td><td>${s.minstock||0}</td><td>${fmt(s.cost||0)}</td><td>${supplyStatus(s)}</td><td><button class="btn btn-sm" onclick="editSupply(${s.id})">✎</button> <button class="btn btn-sm btn-danger" onclick="deleteSupply(${s.id})">🗑</button></td></tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">Sin insumos clinicos registrados</td></tr>';
+  log.innerHTML = supplyUsageLog.length ? supplyUsageLog.map(r=>`<tr><td style="font-size:11px">${r.fecha}</td><td>${r.servicio}</td><td style="font-size:11px">${r.items.map(i=>i.name+' x'+i.qty).join(', ')}</td><td style="font-weight:600">${fmt(r.clinicalCost||0)}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3)">Sin consumo clinico registrado</td></tr>';
+}
+function openSupplyUsageModal(){
+  const wrap = document.getElementById('suero-uso-list');
+  if(!wrap) return;
+  if(!supplies.length){
+    alert('No hay insumos clinicos cargados. Agregalos primero en Insumos Sueroterapia.');
+    return;
+  }
+  wrap.innerHTML = supplies.map(s=>`<div class="form-row" style="margin-bottom:10px"><div class="form-group"><label class="form-label">${s.name} <span style="color:var(--text3)">(${s.stock||0} disp.)</span></label><input type="number" min="0" max="${s.stock||0}" value="0" id="su-qty-${s.id}"></div><div class="form-group"><label class="form-label">Uso</label><input type="text" value="${s.use||''}" readonly></div></div>`).join('');
+  document.getElementById('modal-suero-uso').classList.add('open');
+}
+function confirmServiceSupplies(){
+  if(!pendingServicePayload) return;
+  const selected = [];
+  for(const s of supplies){
+    const el = document.getElementById(`su-qty-${s.id}`);
+    const qty = el ? (parseInt(el.value)||0) : 0;
+    if(qty>0){
+      if(qty>(s.stock||0)){ alert(`Stock insuficiente para ${s.name}`); return; }
+      s.stock = (s.stock||0) - qty;
+      selected.push({id:s.id, name:s.name, qty, cost:s.cost||0, cat:s.cat});
+    }
+  }
+  closeModal('modal-suero-uso');
+  finalizeServiceSale(pendingServicePayload, selected);
+  pendingServicePayload = null;
 }
 
 function openLots(id){
@@ -1611,6 +1804,8 @@ const LS_STOCK    = 'nvg_stock_v3';
 const LS_VENTAS   = 'nvg_ventas_v3';
 const LS_TRANSFERS= 'nvg_transfers_v3';
 const LS_SERVICES = 'nvg_services_v1';
+const LS_SUPPLIES = 'nvg_supplies_v1';
+const LS_SUPPLY_LOG = 'nvg_supply_log_v1';
 const LS_HISTORY  = 'nvg_history_v3';
 const LS_PENDING  = 'nvg_pending_v3'; // acciones pendientes si hay offline
 
@@ -1660,6 +1855,8 @@ async function saveState(){
     localStorage.setItem(LS_VENTAS, JSON.stringify(ventas));
     localStorage.setItem(LS_TRANSFERS, JSON.stringify(transfers));
     localStorage.setItem(LS_SERVICES, JSON.stringify(serviceSales));
+    localStorage.setItem(LS_SUPPLIES, JSON.stringify(supplies));
+    localStorage.setItem(LS_SUPPLY_LOG, JSON.stringify(supplyUsageLog));
   }catch(e){}
 
   if(!syncEnabled){ setSyncStatus('local'); return; }
@@ -1688,6 +1885,8 @@ async function loadState(){
     ventas    = JSON.parse(localStorage.getItem(LS_VENTAS)   ||'[]');
     transfers = JSON.parse(localStorage.getItem(LS_TRANSFERS)||'[]');
     serviceSales = JSON.parse(localStorage.getItem(LS_SERVICES)||'[]');
+    supplies = JSON.parse(localStorage.getItem(LS_SUPPLIES)||'[]');
+    supplyUsageLog = JSON.parse(localStorage.getItem(LS_SUPPLY_LOG)||'[]');
   }catch(e){}
 
   if(!syncEnabled){ setSyncStatus('local'); renderAll(); return; }
@@ -1724,6 +1923,8 @@ async function loadState(){
     localStorage.setItem(LS_VENTAS,    JSON.stringify(ventas));
     localStorage.setItem(LS_TRANSFERS, JSON.stringify(transfers));
     localStorage.setItem(LS_SERVICES, JSON.stringify(serviceSales));
+    localStorage.setItem(LS_SUPPLIES, JSON.stringify(supplies));
+    localStorage.setItem(LS_SUPPLY_LOG, JSON.stringify(supplyUsageLog));
   }catch(e){}
 
   setSyncStatus('ok');
@@ -1753,7 +1954,7 @@ async function syncAddCierre(c){
 }
 
 function renderAll(){
-  renderInv(); renderPosGrid(); renderAlertas(); renderContab(); renderBodega(); renderPedidos(); renderServicios();
+  renderInv(); renderPosGrid(); renderAlertas(); renderContab(); renderBodega(); renderPedidos(); renderServicios(); renderSupplies();
 }
 
 // Auto-save después de cada operación crítica
@@ -1951,6 +2152,7 @@ function goPage(id,btn){
   if(id==='alertas')renderAlertas();
   if(id==='pedidos')renderPedidos();
   if(id==='servicios')renderServicios();
+  if(id==='insumos')renderSupplies();
   if(id==='contab')renderContab();
   if(id==='cierre')renderCierre();
   if(id==='pos'){renderPosGrid();setTimeout(()=>document.getElementById('scanner-input').focus(),100);}
