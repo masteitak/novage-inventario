@@ -20,6 +20,18 @@
   --font:'Segoe UI',system-ui,sans-serif;
 }
 body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+/* LOGIN */
+.login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#1a1815 0%,#2d2a26 100%);z-index:999;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface);border-radius:16px;padding:2.5rem 2rem;width:340px;max-width:95vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.login-logo{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:2rem}
+.login-pin{font-size:22px;letter-spacing:6px;text-align:center;font-family:monospace;font-weight:600;padding:10px;border:1.5px solid var(--border2);border-radius:var(--radius);width:100%;margin-bottom:1rem}
+.login-pin:focus{outline:none;border-color:var(--text)}
+.login-error{color:var(--red);font-size:12px;margin-bottom:8px;min-height:18px}
+.role-badge{font-size:11px;padding:2px 8px;border-radius:20px;margin-left:8px;font-weight:500}
+.role-badge.admin{background:var(--green-bg);color:var(--green)}
+.role-badge.trabajo{background:var(--blue-bg);color:var(--blue)}
+.admin-hidden{display:none !important}
 /* NAV */
 .nav{display:flex;align-items:center;height:var(--nav-h);background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.25rem;gap:2px;position:sticky;top:0;z-index:50}
 .nav-brand{font-size:15px;font-weight:600;letter-spacing:-.3px;margin-right:auto;white-space:nowrap}
@@ -171,6 +183,17 @@ tr:hover td{background:#fafaf8}
 </head>
 <body>
 
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">Novage</div>
+    <div class="login-sub">Ingresa con tu clave para continuar</div>
+    <input class="login-pin" type="password" id="login-pin" placeholder="• • • •" maxlength="8" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Ingresar</button>
+    <div style="font-size:11px;color:var(--text3);margin-top:1rem">2166 administración · 2162 trabajo</div>
+  </div>
+</div>
+
 <nav class="nav">
   <div class="nav-brand">Novage <span>/ Control Integral</span> &nbsp;<span id="sync-indicator" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
   <button class="tab active" onclick="goPage('inventario',this)">
@@ -210,7 +233,7 @@ tr:hover td{background:#fafaf8}
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           Exportar
         </button>
-        <button class="btn btn-primary btn-sm" onclick="openAddProduct()">
+        <button class="btn btn-primary btn-sm" data-admin-only="true" onclick="openAddProduct()">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Agregar
         </button>
@@ -378,7 +401,7 @@ tr:hover td{background:#fafaf8}
             <input type="text" id="tr-available" readonly>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="doTransfer()">
+        <button class="btn btn-primary" data-admin-only="true" onclick="doTransfer()">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
           Realizar traslado
         </button>
@@ -498,7 +521,7 @@ tr:hover td{background:#fafaf8}
   <div class="card" style="margin-top:1rem">
     <div class="card-header">
       <span class="card-title">Historial de días cerrados</span>
-      <button class="btn btn-sm btn-danger" onclick="if(confirm('¿Borrar todo el historial?'))clearHistory()">Limpiar historial</button>
+      <button class="btn btn-sm btn-danger" data-admin-only="true" onclick="if(confirm('¿Borrar todo el historial?'))clearHistory()">Limpiar historial</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -984,6 +1007,7 @@ function renderBodega(){
 }
 
 function doTransfer(){
+  if(!requireAdmin('Solo administración puede trasladar stock')) return;
   const pid=parseInt(document.getElementById('tr-product').value);
   const qty=parseInt(document.getElementById('tr-qty').value)||0;
   if(!pid||qty<=0){alert('Selecciona un producto y cantidad válida');return;}
@@ -1096,6 +1120,7 @@ function renderContab(){
 
 // ─── MODALS ───
 function openAddProduct(){
+  if(!requireAdmin('Solo administración puede agregar productos')) return;
   document.getElementById('modal-prod-title').textContent='Agregar producto';
   document.getElementById('mp-idx').value='';
   ['mp-barcode','mp-name','mp-brand','mp-pres','mp-bodega','mp-espacio','mp-costo','mp-precio','mp-venc','mp-desc'].forEach(id=>document.getElementById(id).value='');
@@ -1106,6 +1131,7 @@ function openAddProduct(){
 }
 
 function openEditProduct(id){
+  if(!requireAdmin('Solo administración puede modificar precios o productos')) return;
   const p=products.find(x=>x.id===id);
   document.getElementById('modal-prod-title').textContent='Editar producto';
   document.getElementById('mp-idx').value=id;
@@ -1127,6 +1153,7 @@ function openEditProduct(id){
 }
 
 function saveProduct(){
+  if(!requireAdmin('Solo administración puede guardar cambios de producto')) return;
   const idx=document.getElementById('mp-idx').value;
   const data={
     barcode:document.getElementById('mp-barcode').value.trim(),
@@ -1157,6 +1184,7 @@ function saveProduct(){
 }
 
 function openAdj(id){
+  if(!requireAdmin('Solo administración puede ajustar cantidades')) return;
   const p=products.find(x=>x.id===id);
   document.getElementById('adj-product-name').textContent=p.name;
   document.getElementById('adj-idx').value=id;
@@ -1166,6 +1194,7 @@ function openAdj(id){
 }
 
 function applyAdj(){
+  if(!requireAdmin('Solo administración puede ajustar cantidades')) return;
   const id=parseInt(document.getElementById('adj-idx').value);
   const p=products.find(x=>x.id===id);
   const db=parseInt(document.getElementById('adj-bodega').value)||0;
@@ -1501,6 +1530,7 @@ function clearHistory(){
 }
 
 function activarOfertaRapida(id){
+  if(!requireAdmin('Solo administración puede modificar precios u ofertas')) return;
   const p = products.find(x=>x.id===id);
   if(!p) return;
   const pct = prompt(`Activar oferta para:\n"${p.name}"\nPrecio actual: ${fmt(p.precio||p.pvp||0)}\n\n¿Qué % de descuento quieres aplicar?`, '15');
@@ -1579,6 +1609,85 @@ saveProduct = function(){
   saveState();
 };
 
+
+// ─── AUTENTICACION Y ROLES ───
+const PINS = {
+  admin: '2166',
+  trabajo: '2162'
+};
+
+let currentRole = null;
+
+function requireAdmin(message){
+  if(currentRole === 'admin') return true;
+  alert(message || 'Solo administración puede realizar esta acción');
+  return false;
+}
+
+function doLogin(){
+  const pinEl = document.getElementById('login-pin');
+  const errEl = document.getElementById('login-error');
+  const pin = pinEl.value.trim();
+  if(pin === PINS.admin){
+    currentRole = 'admin';
+  }else if(pin === PINS.trabajo){
+    currentRole = 'trabajo';
+  }else{
+    errEl.textContent = 'Clave incorrecta';
+    pinEl.value = '';
+    pinEl.focus();
+    return;
+  }
+  errEl.textContent = '';
+  sessionStorage.setItem('novage_role', currentRole);
+  document.getElementById('login-overlay').style.display = 'none';
+  applyRoleUI();
+}
+
+function restoreSession(){
+  const saved = sessionStorage.getItem('novage_role');
+  if(saved === 'admin' || saved === 'trabajo'){
+    currentRole = saved;
+    document.getElementById('login-overlay').style.display = 'none';
+    applyRoleUI();
+    return true;
+  }
+  document.getElementById('login-overlay').style.display = 'flex';
+  return false;
+}
+
+function cerrarSesion(){
+  sessionStorage.removeItem('novage_role');
+  currentRole = null;
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-overlay').style.display = 'flex';
+  const badge = document.getElementById('role-badge');
+  if(badge) badge.remove();
+}
+
+function applyRoleUI(){
+  document.querySelectorAll('[data-admin-only="true"]').forEach((el)=>{
+    el.classList.toggle('admin-hidden', currentRole !== 'admin');
+    if(el.tagName === 'BUTTON') el.disabled = currentRole !== 'admin';
+  });
+
+  let badge = document.getElementById('role-badge');
+  if(!badge){
+    badge = document.createElement('span');
+    badge.id = 'role-badge';
+    badge.className = 'role-badge';
+    document.querySelector('.nav-brand').appendChild(badge);
+  }
+  if(currentRole === 'admin'){
+    badge.className = 'role-badge admin';
+    badge.textContent = 'Administración';
+  }else{
+    badge.className = 'role-badge trabajo';
+    badge.textContent = 'Trabajo';
+  }
+}
+
 // ─── INIT ───
 populateBrands();
 renderInv();
@@ -1587,6 +1696,10 @@ renderAlertas();
 renderContab();
 renderBodega();
 loadState(); // async — actualiza desde Sheets en background
+restoreSession();
+if(!currentRole){
+  document.getElementById('login-pin').focus();
+}
 </script>
 </body>
 </html>
