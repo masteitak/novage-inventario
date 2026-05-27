@@ -774,6 +774,7 @@ function renderInv(){
       <td style="text-align:center">${p.stock_espacio||0}</td>
       <td style="text-align:center">${stockBadge(p)}</td>
       <td>${p.precio>0?fmt(p.precio):'<span style="color:var(--text3)">Sin precio</span>'}</td>
+      <td>${(p.descuento||0)>0 ? `<span class="badge badge-blue">-${p.descuento}%</span>` : `<span style="color:var(--text3)">Sin oferta</span>`}</td>
       <td style="font-size:11px">${fmtDate(p.vencimiento)}</td>
       <td><span class="badge ${vs.badge}">${vs.label}</span></td>
       <td style="display:flex;gap:4px">
