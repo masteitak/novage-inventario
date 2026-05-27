@@ -317,6 +317,12 @@ tr:hover td{background:#fafaf8}
       <div class="card-body">
         <div id="gest-empty" style="color:var(--text3);font-size:13px">Selecciona un producto para editarlo.</div>
         <div id="gest-form" style="display:none">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-size:12px;line-height:1.6;margin-bottom:12px">
+            <div style="font-weight:600;margin-bottom:4px">Guia rapida</div>
+            <div>Usa esta ficha para cambiar nombre, codigo, precio, descuento, descripcion y stock rapido.</div>
+            <div>Usa <b>Lotes</b> cuando el producto tenga mas de un vencimiento o necesites separar cantidades por fecha.</div>
+          </div>
+          <div id="gest-lot-hint" style="display:none;background:var(--amber-bg);border:1px solid var(--amber-light);color:var(--amber);border-radius:var(--radius);padding:9px 11px;font-size:12px;line-height:1.5;margin-bottom:12px"></div>
           <input type="hidden" id="gp-id">
           <div class="form-group"><label class="form-label">Código de barras</label><input type="text" id="gp-barcode"></div>
           <div class="form-group"><label class="form-label">Nombre</label><input type="text" id="gp-name"></div>
@@ -1140,14 +1146,27 @@ function selectGestionProduct(id){
   document.getElementById('gp-minstock').value = p.minstock||0;
   document.getElementById('gp-venc').value = nextVencimiento(p)||'';
   document.getElementById('gp-desc').value = p.descripcion||'';
+  const hint = document.getElementById('gest-lot-hint');
+  if(hint){
+    ensureLots(p);
+    if((p.lots||[]).length > 1){
+      hint.style.display='block';
+      hint.innerHTML = `Este producto tiene <b>${p.lots.length} lotes</b>. Si cambias stock o vencimiento aqui, se reconstruira el stock rapido. Para conservar cada fecha de vencimiento por separado, usa <b>Lotes</b>.`;
+    } else {
+      hint.style.display='block';
+      hint.innerHTML = 'Este producto tiene un solo lote o stock simple. Puedes editar aqui el stock rapido. Si luego recibes otra fecha de vencimiento, usa <b>Lotes</b>.';
+    }
+  }
   renderGestionList();
 }
 function clearGestionSelection(){
   selectedGestionProductId = null;
   const form = document.getElementById('gest-form');
   const empty = document.getElementById('gest-empty');
+  const hint = document.getElementById('gest-lot-hint');
   if(form) form.style.display='none';
   if(empty) empty.style.display='block';
+  if(hint) hint.style.display='none';
   renderGestionList();
 }
 function saveGestionProduct(){
