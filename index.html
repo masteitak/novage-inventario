@@ -777,10 +777,10 @@ function renderInv(){
       <td>${(p.descuento||0)>0 ? `<span class="badge badge-blue">-${p.descuento}%</span>` : `<span style="color:var(--text3)">Sin oferta</span>`}</td>
       <td style="font-size:11px">${fmtDate(p.vencimiento)}</td>
       <td><span class="badge ${vs.badge}">${vs.label}</span></td>
-      <td style="display:flex;gap:4px">
+      <td style="display:flex;gap:4px">${currentRole === 'admin' ? `
         <button class="btn btn-sm" onclick="openAdj(${p.id})" title="Ajustar stock">±</button>
         <button class="btn btn-sm" onclick="openEditProduct(${p.id})" title="Editar">✎</button>
-      </td>
+      ` : ''}</td>
     </tr>`;
   }).join('');
   renderInvMetrics();
