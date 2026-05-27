@@ -777,6 +777,9 @@ const TODAY = new Date();
 
 function fmt(n){return '$'+(Math.round(n)||0).toLocaleString('es-CL')}
 function fmtDate(s){if(!s)return'—';try{return new Date(s).toLocaleDateString('es-CL')}catch{return s}}
+function salePrice(p){return Number(p?.pvp ?? p?.precio ?? 0) || 0}
+function netFromGross(gross){return Math.round((Number(gross)||0)/1.19)}
+function ivaFromGross(gross){const total = Number(gross)||0; return total - netFromGross(total)}
 
 function vencStatus(v){
   if(!v||v==='—')return{badge:'badge-gray',label:'Sin fecha'};
@@ -811,7 +814,7 @@ function previewOferta(){
   if(!preview) return;
   if(pct>0 && precio>0){
     const oferta = Math.round(precio*(1-pct/100));
-    preview.value = fmt(oferta) + ' (ahorro ' + fmt(precio-oferta) + ')';
+    preview.value = fmt(oferta) + ' (ahorro ' + fmt(precio - oferta) + ')';
   } else {
     preview.value = 'Sin oferta';
   }
@@ -832,7 +835,7 @@ function renderInv(){
   const status=document.getElementById('inv-status').value;
   
   let list=products.filter(p=>{
-    if(q&&!p.name.toLowerCase().includes(q)&&!p.barcode.includes(q)&&!p.brand.toLowerCase().includes(q))return false;
+    if(q&&!p.name.toLowerCase().includes(q)&&!(p.barcode||'').includes(q)&&!(p.brand||'').toLowerCase().includes(q))return false;
     if(cat&&p.cat!==cat)return false;
     if(brand&&p.brand!==brand)return false;
     if(loc){
@@ -858,14 +861,15 @@ function renderInv(){
       <td style="text-align:center">${p.stock_bodega||0}</td>
       <td style="text-align:center">${p.stock_espacio||0}</td>
       <td style="text-align:center">${stockBadge(p)}</td>
-      <td>${p.precio>0?fmt(p.precio):'<span style="color:var(--text3)">Sin precio</span>'}</td>
+      <td>${salePrice(p)>0?fmt(salePrice(p)):'<span style="color:var(--text3)">Sin precio</span>'}</td>
       <td>${(p.descuento||0)>0 ? `<span class="badge badge-blue">-${p.descuento}%</span>` : `<span style="color:var(--text3)">Sin oferta</span>`}</td>
       <td style="font-size:11px">${fmtDate(p.vencimiento)}</td>
       <td><span class="badge ${vs.badge}">${vs.label}</span></td>
       <td style="text-align:center"><input type="checkbox" ${p.proximoPedido ? 'checked' : ''} onchange="toggleProximoPedido(${p.id}, this.checked)" ${currentRole !== 'admin' ? 'disabled' : ''}></td>
       <td style="display:flex;gap:4px">${currentRole === 'admin' ? `
         <button class="btn btn-sm" onclick="openAdj(${p.id})" title="Ajustar stock">±</button>
-        <button class="btn btn-sm" onclick="openEditProduct(${p.id})" title="Editar">✎</button>
+        <button class="btn btn-sm" onclick="openEditProduct(${p.id})" title="Editar / código">✎</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})" title="Eliminar">🗑</button>
       ` : ''}</td>
     </tr>`;
   }).join('');
@@ -909,7 +913,7 @@ function renderPosGrid(){
   document.getElementById('pos-chips').innerHTML=`<button class="chip ${!posCatFilter?'active':''}" onclick="setPosCat('',this)">Todo</button>`+cats.map(c=>`<button class="chip ${posCatFilter===c?'active':''}" onclick="setPosCat('${c}',this)">${c}</button>`).join('');
   
   let list=products.filter(p=>{
-    if(q&&!p.name.toLowerCase().includes(q)&&!p.barcode.includes(q))return false;
+    if(q&&!p.name.toLowerCase().includes(q)&&!(p.barcode||'').includes(q))return false;
     if(posCatFilter&&p.cat!==posCatFilter)return false;
     return true;
   });
@@ -917,7 +921,7 @@ function renderPosGrid(){
   document.getElementById('pos-grid').innerHTML=list.map(p=>{
     const tot=totalStock(p);
     const dis=tot===0;
-    const precio=p.precio||p.pvp||0;
+    const precio=salePrice(p);
     const desc=p.descuento||0;
     const precioFinal=desc>0?Math.round(precio*(1-desc/100)):precio;
     const pvVenc=porVencer(p);
@@ -980,7 +984,7 @@ function renderCart(){
   }
   el.innerHTML=cart.map((c,ci)=>{
     const p=products.find(x=>x.id===c.id);
-    const precio=p.precio||p.pvp||0;
+    const precio=salePrice(p);
     const d=p.descuento||0;
     const precioFinal=d>0?Math.round(precio*(1-d/100)):precio;
     return`<div class="cart-item">
@@ -1008,16 +1012,17 @@ function chQty(ci,d){
 function clearCart(){cart=[];renderCart();}
 
 function updTotals(){
-  const sub=cart.reduce((a,c)=>{
+  const gross=cart.reduce((a,c)=>{
     const p=products.find(x=>x.id===c.id);
-    const base=p.precio||p.pvp||0;
+    const base=salePrice(p);
     const d=p.descuento||0;
     return a+(d>0?Math.round(base*(1-d/100)):base)*c.qty;
   },0);
-  const iva=sub*0.19;
+  const sub=netFromGross(gross);
+  const iva=ivaFromGross(gross);
   document.getElementById('c-sub').textContent=fmt(sub);
   document.getElementById('c-iva').textContent=fmt(iva);
-  document.getElementById('c-total').textContent=fmt(sub+iva);
+  document.getElementById('c-total').textContent=fmt(gross);
   calcVuelto();
 }
 
@@ -1028,13 +1033,13 @@ function selPay(m){
 }
 
 function calcVuelto(){
-  const sub=cart.reduce((a,c)=>{
+  const gross=cart.reduce((a,c)=>{
     const p=products.find(x=>x.id===c.id);
-    const base=p.precio||p.pvp||0;
+    const base=salePrice(p);
     const d=p.descuento||0;
     return a+(d>0?Math.round(base*(1-d/100)):base)*c.qty;
   },0);
-  const total=(sub*1.19);
+  const total=gross;
   const rec=parseFloat(document.getElementById('efectivo-in').value)||0;
   const v=rec-total;
   const el=document.getElementById('vuelto-val');
@@ -1043,11 +1048,13 @@ function calcVuelto(){
 
 function procesarVenta(){
   if(!cart.length){alert('El carrito está vacío');return;}
-  const sub=cart.reduce((a,c)=>{const p=products.find(x=>x.id===c.id);return a+(p.precio||p.pvp||0)*c.qty;},0);
-  const total=sub*1.19;
+  const gross=cart.reduce((a,c)=>{const p=products.find(x=>x.id===c.id);return a+salePrice(p)*c.qty;},0);
+  const sub=netFromGross(gross);
+  const iva=ivaFromGross(gross);
+  const total=gross;
   const items=cart.map(c=>{
     const p=products.find(x=>x.id===c.id);
-    const base=p.precio||p.pvp||0;
+    const base=salePrice(p);
     const d=p.descuento||0;
     const precioFinal=d>0?Math.round(base*(1-d/100)):base;
     return{name:p.name,barcode:p.barcode,qty:c.qty,precio:precioFinal,descuento:d};
@@ -1061,7 +1068,7 @@ function procesarVenta(){
     if(rem>0){p.stock_bodega=Math.max(0,p.stock_bodega-rem);}
   });
   const payLabels={redbank:'Redbank BancoEstado',efectivo:'Efectivo',transfer:'Transferencia',mixto:'Pago mixto'};
-  ventas.unshift({n:ventas.length+1,fecha:new Date().toLocaleString('es-CL'),items,metodo:payMethod,empresa:'Dacez SpA',tipo:'Producto',sub,iva:sub*0.19,total});
+  ventas.unshift({n:ventas.length+1,fecha:new Date().toLocaleString('es-CL'),items,metodo:payMethod,empresa:'Dacez SpA',tipo:'Producto',sub,iva,total});
   document.getElementById('ok-method').textContent=payLabels[payMethod];
   document.getElementById('ok-total').textContent=fmt(total);
   document.getElementById('ok-items').innerHTML=items.map(i=>`${i.qty}× ${i.name}`).join('<br>');
@@ -1172,7 +1179,7 @@ function renderAlertas(){
     <td style="font-weight:500">${p.name}</td>
     <td><span class="badge badge-gray">${p.brand||'—'}</span></td>
     <td>${p.costo>0?fmt(p.costo):'—'}</td>
-    <td>${p.precio>0?fmt(p.precio):p.pvp>0?fmt(p.pvp):'—'}</td>
+    <td>${salePrice(p)>0?fmt(salePrice(p)):'—'}</td>
   </tr>`).join('');
 }
 
@@ -1313,7 +1320,7 @@ function openEditProduct(id){
   document.getElementById('mp-bodega').value=p.stock_bodega||0;
   document.getElementById('mp-espacio').value=p.stock_espacio||0;
   document.getElementById('mp-costo').value=p.costo||0;
-  document.getElementById('mp-precio').value=p.precio||0;
+  document.getElementById('mp-precio').value=salePrice(p)||0;
   document.getElementById('mp-descuento').value=p.descuento||0;
   document.getElementById('mp-desc').value=p.descripcion||'';
   document.getElementById('mp-venc').value=p.vencimiento||'';
@@ -1346,11 +1353,23 @@ function saveProduct(){
     const i=products.findIndex(x=>x.id===parseInt(idx));
     products[i]={...products[i],...data};
   }else{
-    data.id=products.length;
+    data.id=products.reduce((max,p)=>Math.max(max,p.id||0),-1)+1;
     products.push(data);
   }
   closeModal('modal-prod');
   renderInv();renderPosGrid();renderBodega();renderAlertas();
+}
+
+function deleteProduct(id){
+  if(!requireAdmin('Solo administración puede eliminar productos')) return;
+  const p=products.find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm(`¿Eliminar el producto "${p.name}"? Esta acción quita el registro de la matriz.`)) return;
+  products = products.filter(x=>x.id!==id);
+  cart = cart.filter(x=>x.id!==id);
+  closeModal('modal-prod');
+  renderInv();renderPosGrid();renderBodega();renderAlertas();renderPedidos();renderCart();
+  saveState();
 }
 
 function openAdj(id){
@@ -1380,7 +1399,7 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 // ─── EXPORT ───
 function exportCSV(){
   const rows=[['Código Barras','Nombre','Marca','Categoría','Presentación','Stock Bodega','Stock Espacio','Total Stock','Costo','Precio Venta','Vencimiento','Estado']];
-  products.forEach(p=>rows.push([p.barcode,p.name,p.brand,p.cat,p.pres,p.stock_bodega,p.stock_espacio,totalStock(p),p.costo,p.precio,p.vencimiento,vencStatus(p.vencimiento).label]));
+  products.forEach(p=>rows.push([p.barcode,p.name,p.brand,p.cat,p.pres,p.stock_bodega,p.stock_espacio,totalStock(p),p.costo,salePrice(p),p.vencimiento,vencStatus(p.vencimiento).label]));
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
@@ -1477,10 +1496,10 @@ async function loadState(){
       if(sm[p.id]!==undefined){
         p.stock_bodega  = sm[p.id].b  ?? p.stock_bodega;
         p.stock_espacio = sm[p.id].e  ?? p.stock_espacio;
-        if(sm[p.id].precio)    p.precio    = sm[p.id].precio;
-        if(sm[p.id].costo)     p.costo     = sm[p.id].costo;
-        if(sm[p.id].pvp)       p.pvp       = sm[p.id].pvp;
-        if(sm[p.id].vencimiento) p.vencimiento = sm[p.id].vencimiento;
+        if(sm[p.id].precio !== undefined)    p.precio    = sm[p.id].precio;
+        if(sm[p.id].costo !== undefined)     p.costo     = sm[p.id].costo;
+        if(sm[p.id].pvp !== undefined)       p.pvp       = sm[p.id].pvp;
+        if(sm[p.id].vencimiento !== undefined) p.vencimiento = sm[p.id].vencimiento;
         if(sm[p.id].minstock !== undefined) p.minstock = sm[p.id].minstock;
         if(sm[p.id].proximoPedido !== undefined) p.proximoPedido = sm[p.id].proximoPedido;
       }
@@ -1505,11 +1524,11 @@ async function loadState(){
       if(local){
         local.stock_bodega  = sp.stock_bodega;
         local.stock_espacio = sp.stock_espacio;
-        if(sp.precio)    local.precio    = sp.precio;
-        if(sp.costo)     local.costo     = sp.costo;
-        if(sp.pvp)       local.pvp       = sp.pvp;
-        if(sp.minstock)  local.minstock  = sp.minstock;
-        if(sp.vencimiento) local.vencimiento = sp.vencimiento;
+        if(sp.precio !== undefined)    local.precio    = sp.precio;
+        if(sp.costo !== undefined)     local.costo     = sp.costo;
+        if(sp.pvp !== undefined)       local.pvp       = sp.pvp;
+        if(sp.minstock !== undefined)  local.minstock  = sp.minstock;
+        if(sp.vencimiento !== undefined) local.vencimiento = sp.vencimiento;
       }
     });
   }
