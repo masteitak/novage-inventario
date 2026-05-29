@@ -196,6 +196,7 @@ tr:hover td{background:#fafaf8}
 
 <nav class="nav">
   <div class="nav-brand">Novage <span>/ Control Integral</span> &nbsp;<span id="sync-indicator" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+  <button class="btn btn-sm" id="logout-btn" onclick="cerrarSesion()" style="display:none;margin-right:8px;color:var(--text3)">Salir</button>
   <button class="tab active" onclick="goPage('inventario',this)">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg>
     Inventario
@@ -2513,6 +2514,12 @@ function exportCierreCSV(){
 
 // ─── NAV ───
 function goPage(id,btn){
+  if(currentRole && !canAccessPage(id)){
+    alert('Tu clave no tiene acceso a esta sección');
+    const first = firstAllowedTab();
+    if(first && first !== btn) first.click();
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -2567,7 +2574,25 @@ const PINS = {
 };
 
 let currentRole = null;
+const ROLE_ALLOWED_PAGES = {
+  admin: null,
+  trabajo: ['inventario','pos','servicios']
+};
 
+function allowedPagesForRole(){
+  const allowed = ROLE_ALLOWED_PAGES[currentRole] || null;
+  return allowed ? new Set(allowed) : null;
+}
+function canAccessPage(id){
+  const allowed = allowedPagesForRole();
+  return !allowed || allowed.has(id);
+}
+function firstAllowedTab(){
+  return [...document.querySelectorAll('.tab')].find(tab=>{
+    const m = (tab.getAttribute('onclick')||'').match(/goPage\('([^']+)'/);
+    return m && canAccessPage(m[1]);
+  }) || null;
+}
 function requireAdmin(message){
   if(currentRole === 'admin') return true;
   alert(message || 'Solo administración puede realizar esta acción');
@@ -2614,12 +2639,21 @@ function cerrarSesion(){
   document.getElementById('login-overlay').style.display = 'flex';
   const badge = document.getElementById('role-badge');
   if(badge) badge.remove();
+  const logoutBtn = document.getElementById('logout-btn');
+  if(logoutBtn) logoutBtn.style.display = 'none';
+  document.querySelectorAll('.tab').forEach(tab=>tab.classList.remove('admin-hidden'));
+  document.getElementById('login-pin').focus();
 }
 
 function applyRoleUI(){
   document.querySelectorAll('[data-admin-only="true"]').forEach((el)=>{
     el.classList.toggle('admin-hidden', currentRole !== 'admin');
     if(el.tagName === 'BUTTON') el.disabled = currentRole !== 'admin';
+  });
+  document.querySelectorAll('.tab').forEach((tab)=>{
+    const m = (tab.getAttribute('onclick')||'').match(/goPage\('([^']+)'/);
+    if(!m) return;
+    tab.classList.toggle('admin-hidden', !canAccessPage(m[1]));
   });
 
   let badge = document.getElementById('role-badge');
@@ -2635,6 +2669,13 @@ function applyRoleUI(){
   }else{
     badge.className = 'role-badge trabajo';
     badge.textContent = 'Trabajo';
+  }
+  const logoutBtn = document.getElementById('logout-btn');
+  if(logoutBtn) logoutBtn.style.display = currentRole ? 'inline-flex' : 'none';
+  const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
+  if(activePage && !canAccessPage(activePage)){
+    const first = firstAllowedTab();
+    if(first) first.click();
   }
 }
 
