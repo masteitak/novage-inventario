@@ -1,36 +1,56 @@
 # Novage Inventario
 
-Repositorio inicial para publicar y organizar un sistema de inventario en HTML.
+Sistema operativo de inventario, ventas y control comercial para Novage, mantenido en un artefacto HTML publicado en GitHub Pages.
 
 ## Proposito
 
-Este proyecto contiene una primera version funcional del sistema de inventario de Novage en formato HTML. Su objetivo inmediato es conservar una base publicada en GitHub y preparar el terreno para una evolucion mas ordenada.
+Centralizar en un solo sistema:
+
+- inventario comercial
+- ventas de productos y servicios
+- pedidos comerciales
+- insumos de sueroterapia
+- control basico contable por empresa
 
 ## Archivo principal
 
-- `novage_sistema_inventario.html`
+- `index.html`
 
 ## Estado actual
 
-- Proyecto publicado en GitHub
-- Archivo HTML versionado en la rama `main`
-- Repositorio listo para recibir documentacion y mejoras
+- Proyecto publicado en GitHub y GitHub Pages
+- Panel dedicado de `Gestión Inventario`
+- Control de acceso por roles:
+  - `2166` administración
+  - `2162` trabajo
+- Lotes y vencimientos múltiples
+- Pedido comercial con detalle por ítem
+- Insumos clínicos para sueroterapia
+- Precio de venta preparado para sincronización desde Google Sheet
+
+## Capacidades implementadas
+
+- inventario con stock por bodega y espacio
+- edición rápida de productos
+- lotes por vencimiento
+- ventas POS con descuento
+- ventas de servicios
+- control de pedidos con cantidad editable, costo y subtotal
+- panel de gestión con fuente y última sincronización del precio
+
+## Documentacion
+
+- `docs/estado-sistema.md`
+- Nota Obsidian: `NOVAGE/novage-inventario.md`
 
 ## Proximos pasos recomendados
 
-1. Separar estilos, logica y estructura en archivos independientes.
-2. Agregar un sistema de versionado mas descriptivo para cambios futuros.
-3. Documentar decisiones tecnicas y flujo de trabajo en Obsidian.
-4. Definir una estructura agentic con carpetas para documentacion, sistema y automatizacion.
-
-## Proyeccion de arquitectura
-
-Una evolucion recomendada para este repositorio es:
-
-- `docs/` para documentacion tecnica y operativa
-- `system/` o `agents/` para prompts, reglas y flujos agenticos
-- `src/` si el HTML crece y se convierte en una aplicacion mas modular
+1. Validar en producción la sincronización de precio de venta desde Google Sheet.
+2. Separar HTML, estilos y lógica en módulos.
+3. Definir una fuente maestra estable para catálogo y precios.
+4. Extender `docs/` con arquitectura, flujos y mantenimiento.
 
 ## Repositorio remoto
 
 - GitHub: `https://github.com/masteitak/novage-inventario`
+- Web: `https://masteitak.github.io/novage-inventario/`
