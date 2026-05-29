@@ -41,6 +41,8 @@ Centralizar en un solo sistema:
 ## Documentacion
 
 - `docs/estado-sistema.md`
+- `docs/arquitectura-modular.md`
+- `docs/flujo-datos.md`
 - Nota Obsidian: `NOVAGE/novage-inventario.md`
 
 ## Proximos pasos recomendados
