@@ -335,6 +335,7 @@ tr:hover td{background:#fafaf8}
             <div class="form-group"><label class="form-label">Stock Bodega</label><input type="number" id="gp-bodega" min="0"></div>
             <div class="form-group"><label class="form-label">Stock Espacio</label><input type="number" id="gp-espacio" min="0"></div>
           </div>
+          <div id="gest-price-source" style="display:none;background:var(--blue-bg);border:1px solid #bfdbfe;color:var(--blue);border-radius:var(--radius);padding:9px 11px;font-size:12px;line-height:1.5;margin-bottom:12px"></div>
           <div class="form-row">
             <div class="form-group"><label class="form-label">Costo</label><input type="number" id="gp-costo" min="0"></div>
             <div class="form-group"><label class="form-label">Precio venta</label><input type="number" id="gp-precio" min="0"></div>
@@ -942,6 +943,7 @@ const RAW = [{"barcode":"606110297004","name":"Cranberry Plus","brand":"WELL PLU
 let products = RAW.map((p,i)=>({...p,id:i,proximoPedido:false,lots:Array.isArray(p.lots)?p.lots:[]}));
 const WELLPLUS_CATALOG_VERSION = '2026-05-28-wellplus-v1';
 const LS_WELLPLUS_CATALOG_VERSION = 'nvg_wellplus_catalog_version';
+const LS_WELLPLUS_PRICE_SYNC_TS = 'nvg_wellplus_price_sync_ts';
 let cart = [];
 let payMethod = 'redbank';
 let ventas = [];
@@ -1167,6 +1169,18 @@ function selectGestionProduct(id){
   document.getElementById('gp-minstock').value = p.minstock||0;
   document.getElementById('gp-venc').value = nextVencimiento(p)||'';
   document.getElementById('gp-desc').value = p.descripcion||'';
+  const priceSource = document.getElementById('gest-price-source');
+  if(priceSource){
+    const syncTs = localStorage.getItem(LS_WELLPLUS_PRICE_SYNC_TS)||'';
+    const syncText = syncTs ? new Date(syncTs).toLocaleString('es-CL') : 'sin sincronizacion registrada';
+    if(((p.brand||'').toUpperCase().replace(/\s+/g,'')) === 'WELLPLUS'){
+      priceSource.style.display='block';
+      priceSource.innerHTML = `Precio de venta sincronizable desde <b>Google Sheet</b>.<br>Fuente actual: <b>${p.price_source||'Catalogo local'}</b> · Ultima sincronizacion: <b>${syncText}</b>`;
+    } else {
+      priceSource.style.display='none';
+      priceSource.innerHTML = '';
+    }
+  }
   const hint = document.getElementById('gest-lot-hint');
   if(hint){
     ensureLots(p);
@@ -1185,9 +1199,11 @@ function clearGestionSelection(){
   const form = document.getElementById('gest-form');
   const empty = document.getElementById('gest-empty');
   const hint = document.getElementById('gest-lot-hint');
+  const priceSource = document.getElementById('gest-price-source');
   if(form) form.style.display='none';
   if(empty) empty.style.display='block';
   if(hint) hint.style.display='none';
+  if(priceSource){ priceSource.style.display='none'; priceSource.innerHTML=''; }
   renderGestionList();
 }
 function saveGestionProduct(){
@@ -2028,6 +2044,8 @@ function exportVentasCSV(){
 // ─── CONFIGURACIÓN GOOGLE SHEETS ───
 // ↓ Reemplaza esta URL con la de tu Web App publicada
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPZ_7UkYkNJj38o3rthJwK40xMR7_JS_vu04Smqhoas-AfFVFmKrbvDtqIoS4d0McB/exec';
+const WELLPLUS_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1afTrveu4wh1FJ3bFgvwHD5OIumNk9kTZ/export?format=csv&gid=1322354912';
+const WELLPLUS_SHEET_SYNC_ENABLED = true;
 let syncEnabled = API_URL !== 'https://script.google.com/macros/s/AKfycbzPZ_7UkYkNJj38o3rthJwK40xMR7_JS_vu04Smqhoas-AfFVFmKrbvDtqIoS4d0McB/exec';
 
 // ─── CAPA DE SINCRONIZACIÓN ───
@@ -2078,6 +2096,120 @@ async function api(action, body={}){
   }
 }
 
+
+function normalizeCatalogText(value){
+  return (value||'').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/&/g,' y ')
+    .replace(/[+]/g,' plus ')
+    .replace(/[\/\-,\.]/g,' ')
+    .replace(/\([^)]*\)/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function wellplusCatalogKey(name, pres){
+  return `${normalizeCatalogText(name)}|${normalizeCatalogText(pres)}`;
+}
+function parseCsvLine(line){
+  const out=[];
+  let cur='';
+  let q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(q && line[i+1]==='"'){ cur+='"'; i++; }
+      else q=!q;
+    } else if(ch===',' && !q){
+      out.push(cur);
+      cur='';
+    } else cur+=ch;
+  }
+  out.push(cur);
+  return out.map(v=>v.trim());
+}
+function parseCsvText(text){
+  return text.split(/\r?\n/).filter(line=>line.trim()).map(parseCsvLine);
+}
+function parseMoneyValue(value){
+  const clean = (value||'').toString().replace(/[^0-9,-]/g,'').replace(/\./g,'').replace(',', '.');
+  const n = Number(clean);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+function wellplusAliasKey(key){
+  const aliases = {
+    [wellplusCatalogKey('cogni pro','90 capsulas')]: wellplusCatalogKey('cogni pro','90 capsulas'),
+    [wellplusCatalogKey('neuro calm','60 capsulas')]: wellplusCatalogKey('neuro calm','60 capsulas'),
+    [wellplusCatalogKey('iron plus liposomal','60 capsulas')]: wellplusCatalogKey('iron plus liposomal','60 capsulas'),
+    [wellplusCatalogKey('zinc selenio manganeso','60 capsulas')]: wellplusCatalogKey('zinc selenio manganeso','60 capsulas'),
+    [wellplusCatalogKey('l triptofano pure','180 capsulas')]: wellplusCatalogKey('l triptofano pure','180 capsulas'),
+    [wellplusCatalogKey('shisandra pure','180 capsulas')]: wellplusCatalogKey('shisandra pure','180 capsulas'),
+    [wellplusCatalogKey('l glutation liposomal 250 mg','60 capsulas')]: wellplusCatalogKey('l glutation liposomal 250 mg','60 capsulas'),
+    [wellplusCatalogKey('coq10 activa liposomal ubiquinol acetato','180 capsulas')]: wellplusCatalogKey('coq10 activa liposomal ubiquinol acetato','180 capsulas'),
+    [wellplusCatalogKey('energy cell mitocondrial activator','30 capsulas')]: wellplusCatalogKey('energy cell mitocondrial activator','30 capsulas'),
+    [wellplusCatalogKey('sod 750 znsemn','30 capsulas')]: wellplusCatalogKey('sod 750 znsemn','30 capsulas'),
+    [wellplusCatalogKey('prebiotico n°2 aerobic bateria','60 capsulas')]: wellplusCatalogKey('prebiotico n°2 aerobic bateria','60 capsulas'),
+    [wellplusCatalogKey('collagen pure peptidos bioactivos','90 capsulas')]: wellplusCatalogKey('collagen pure peptidos bioactivos','90 capsulas'),
+    [wellplusCatalogKey('triple potasio quelado','120 capsulas')]: wellplusCatalogKey('triple potasio quelado','120 capsulas'),
+  };
+  return aliases[key] || key;
+}
+async function syncWellplusCatalogFromSheet(){
+  if(!WELLPLUS_SHEET_SYNC_ENABLED || !WELLPLUS_SHEET_CSV_URL) return false;
+  try{
+    const res = await fetch(WELLPLUS_SHEET_CSV_URL, {cache:'no-store'});
+    if(!res.ok) throw new Error(`CSV ${res.status}`);
+    const csv = await res.text();
+    const rows = parseCsvText(csv);
+    if(rows.length < 2) return false;
+    const headers = rows[0].map(normalizeCatalogText);
+    const col = {
+      producto: headers.findIndex(h=>h==='producto' || h==='product'),
+      presentacion: headers.findIndex(h=>h==='presentacion' || h==='presentacion capsulas' || h==='formato'),
+      mayoristaSinIva: headers.findIndex(h=>h.includes('mayorista sin iva') || h==='costo' || h==='mayorista neto'),
+      iva19: headers.findIndex(h=>h.includes('iva 19')),
+      mayoristaConIva: headers.findIndex(h=>h.includes('mayorista con iva') || h==='precio mayorista' || h==='precio con iva'),
+      pvp: headers.findIndex(h=>h==='pvp' || h==='precio venta' || h==='precio web' || h==='venta web' || h==='well plus'),
+      link: headers.findIndex(h=>h.includes('link well plus') || h==='link' || h==='url'),
+    };
+    if(col.producto < 0 || col.presentacion < 0) return false;
+    const lookup = new Map();
+    products.forEach(p=>{
+      const brand = ((p.brand||'').toUpperCase().replace(/\s+/g,''));
+      if(brand !== 'WELLPLUS') return;
+      lookup.set(wellplusAliasKey(wellplusCatalogKey(p.name, p.pres)), p);
+    });
+    let touched = 0;
+    rows.slice(1).forEach(row=>{
+      const name = row[col.producto] || '';
+      const pres = row[col.presentacion] || '';
+      if(!name || !pres) return;
+      const key = wellplusAliasKey(wellplusCatalogKey(name, pres));
+      const pvp = col.pvp >= 0 ? parseMoneyValue(row[col.pvp]) : 0;
+      const link = col.link >= 0 ? (row[col.link]||'').trim() : '';
+      const existing = lookup.get(key);
+      if(existing){
+        if(pvp > 0) existing.pvp = pvp;
+        if(link) existing.wellplus_link = link;
+        existing.price_source = 'Google Sheet';
+        touched++;
+      }
+    });
+    if(touched){
+      try{
+        const sm={};
+        products.forEach(p=>{ sm[p.id]={b:p.stock_bodega,e:p.stock_espacio,precio:p.precio,costo:p.costo,pvp:p.pvp,minstock:p.minstock,vencimiento:p.vencimiento,proximoPedido:!!p.proximoPedido,pedidoCantidad:p.pedidoCantidad||0,pedidoObservacion:p.pedidoObservacion||''}; });
+        localStorage.setItem(LS_STOCK, JSON.stringify(sm));
+        localStorage.setItem(LS_WELLPLUS_PRICE_SYNC_TS, new Date().toISOString());
+      }catch(e){}
+      renderAll();
+    }
+    return touched > 0;
+  }catch(e){
+    console.warn('Wellplus sheet sync error:', e.message);
+    return false;
+  }
+}
+
 // Guardar stock completo a Sheets + localStorage
 async function saveState(){
   // Siempre guardar en localStorage primero (instantáneo)
@@ -2124,7 +2256,7 @@ async function loadState(){
     supplyUsageLog = JSON.parse(localStorage.getItem(LS_SUPPLY_LOG)||'[]');
   }catch(e){}
 
-  if(!syncEnabled){ applyWellplusCatalogVersion(); setSyncStatus('local'); renderAll(); return; }
+  if(!syncEnabled){ applyWellplusCatalogVersion(); await syncWellplusCatalogFromSheet(); setSyncStatus('local'); renderAll(); return; }
 
   // Luego cargar desde Sheets (fuente de verdad)
   setSyncStatus('loading');
@@ -2163,6 +2295,7 @@ async function loadState(){
   }catch(e){}
 
   applyWellplusCatalogVersion();
+  await syncWellplusCatalogFromSheet();
   setSyncStatus('ok');
   renderAll();
 }
