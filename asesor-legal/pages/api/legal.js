@@ -7,6 +7,7 @@ import { SYSTEM_BASE, MODULOS, detectarArea } from '../../lib/modulos-legales';
 // Caché simple en memoria (se resetea con cada deploy, suficiente para uso personal)
 const cache = new Map();
 const CACHE_TTL = 1000 * 60 * 60; // 1 hora
+const CACHE_MAX = 300; // máximo de entradas para evitar memory leak
 
 export const config = {
   api: {
@@ -49,14 +50,15 @@ export default async function handler(req, res) {
     // System prompt = base + solo el módulo del área detectada (~800 tokens total)
     const systemPrompt = `${SYSTEM_BASE}\n\n${moduloLegal}`;
 
-    // Cache key: hash simple de consulta + área (solo para consultas de texto)
-    const cacheKey = !fileData ? `${areaDetectada}:${textoParaDetectar.slice(0, 100)}` : null;
+    // Cache key: texto completo + área (solo para consultas de texto)
+    const cacheKey = !fileData ? `${areaDetectada}:${textoParaDetectar}` : null;
     if (cacheKey && cache.has(cacheKey)) {
       const cached = cache.get(cacheKey);
       if (Date.now() - cached.ts < CACHE_TTL) {
         res.setHeader('X-Cache', 'HIT');
         return res.status(200).json({ content: cached.content, area: areaDetectada });
       }
+      cache.delete(cacheKey); // eliminar entrada expirada
     }
 
     // Construir mensajes para Anthropic
@@ -70,26 +72,29 @@ export default async function handler(req, res) {
       // Construir contenido multimodal
       let content = [];
 
-      // Añadir el archivo (imagen o PDF)
+      // Añadir el archivo (imagen, PDF o texto plano)
+      const isImage = fileType.startsWith('image/');
       if (fileType === 'application/pdf') {
         content.push({
           type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: fileData
-          }
+          source: { type: 'base64', media_type: 'application/pdf', data: fileData }
         });
-      } else if (fileType.startsWith('image/')) {
+      } else if (isImage) {
+        // Normalizar tipos de imagen poco comunes (heic, heif) a jpeg para Anthropic
+        const safeMediaType = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(fileType) ? fileType : 'image/jpeg';
         content.push({
           type: 'image',
-          source: {
-            type: 'base64',
-            media_type: fileType,
-            data: fileData
-          }
+          source: { type: 'base64', media_type: safeMediaType, data: fileData }
+        });
+      } else if (fileType === 'text/plain') {
+        // Archivos .txt: decodificar y añadir como texto
+        const textContent = Buffer.from(fileData, 'base64').toString('utf-8');
+        content.push({
+          type: 'text',
+          text: `[Contenido del archivo "${fileName || 'documento.txt'}"]\n${textContent}`
         });
       }
+      // Tipos desconocidos se ignoran (el texto de la pregunta igual se envía)
 
       // Añadir el texto
       const textoActual = typeof lastMsg.content === 'string'
@@ -97,9 +102,9 @@ export default async function handler(req, res) {
         : lastMsg.content?.find?.(c => c.type === 'text')?.text || '';
 
       // Instrucción especial para capturas de pantalla y documentos físicos
-      const instruccionImagen = fileType.startsWith('image/')
+      const instruccionImagen = isImage
         ? `\n\n[INSTRUCCIÓN: Si la imagen contiene texto (documento, captura de pantalla, correo, chat, notificación), primero extrae y transcribe el texto visible completo, luego analiza jurídicamente su contenido. Archivo: ${fileName || 'imagen adjunta'}]`
-        : `\n\n[Documento adjunto: ${fileName || 'documento'}]`;
+        : fileType !== 'text/plain' ? `\n\n[Documento adjunto: ${fileName || 'documento'}]` : '';
 
       content.push({
         type: 'text',
@@ -160,8 +165,9 @@ export default async function handler(req, res) {
               res.write(`data: ${JSON.stringify({ text: data.delta.text })}\n\n`);
             }
             if (data.type === 'message_stop') {
-              // Guardar en caché si no tiene archivo
+              // Guardar en caché si no tiene archivo (con límite de tamaño)
               if (cacheKey && fullContent) {
+                if (cache.size >= CACHE_MAX) cache.clear();
                 cache.set(cacheKey, { content: fullContent, ts: Date.now() });
               }
               res.write(`data: ${JSON.stringify({ done: true, area: areaDetectada })}\n\n`);

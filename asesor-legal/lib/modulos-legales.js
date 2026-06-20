@@ -277,19 +277,23 @@ CERTIFICADOS CBR RANCAGUA:
 PLAZOS CBR: inscripción propiedad 15-30 días | GP ~6 días hábiles`
 };
 
-// DETECTOR DE ÁREA — elige el módulo correcto según palabras clave
-// Esto es lo que ahorra el 80% de tokens
+// DETECTOR DE ÁREA — compilados a nivel de módulo para no recompilar en cada llamada
+const RE_HERENCIA     = /herencia|sucesi[oó]n|falleci|difunto|causante|testamento|posesi[oó]n efectiva|heredero|leg[ií]tima|legatario|bienes del|muri[oó]|deceso|intestad/;
+const RE_LABORAL      = /despido|finiquito|cotizacion|remuneraci[oó]n|laboral|empleador|empleado|jefe|sueldo|indemnizaci[oó]n|contrato de trabajo|carta de despido|teletrabajo|licencia.{0,10}m[eé]dica|licencia.{0,10}trabajo|licencia.{0,10}laboral|accidente laboral|sindicato|huelga/;
+const RE_FAMILIA      = /alimento|divorcio|separaci[oó]n|cuidado personal|relaci[oó]n directa|matrimonio|nulidad matrimon|violencia intrafamiliar|vif|custodia|pensi[oó]n alimenticia|mediaci[oó]n familiar|familia|conviviente|pareja/;
+const RE_SEGUROS      = /seguro|isapre|fonasa|licencia|reembolso|prestaci[oó]n|cobertura|rechazo.*seguro|metlife|bupa|salud.*reclamo|cmf.*seguro|p[oó]liza|siniestro/;
+const RE_PENAL        = /penal|delito|denuncia|querella|robo|hurto|estafa|amenaza|lesion|fiscal|carabinero|pdi|detenid|imputad|v[ií]ctima.*penal|crimen/;
+const RE_ADMIN        = /recurso de protecci[oó]n|transparencia|funcionario|organismo p[uú]blico|municipalidad|gobierno|contralor[ií]a|sernac|reclamo.*empresa|consumidor|arriendo.*reclamo/;
+const RE_PROPIEDAD    = /propiedad|terreno|parcela|sitio|inscripci[oó]n|cbr|conservador|hipoteca|gravamen|escritura|dominio|bien ra[ií]z|expropiaci[oó]n|servidumbre/;
+
 export function detectarArea(texto) {
   const t = texto.toLowerCase();
-
-  if (/herencia|sucesi[oó]n|falleci|difunto|causante|testamento|posesi[oó]n efectiva|heredero|legítima|legatario|bienes del|murió|muri[oó]|deceso|intestad/.test(t)) return 'herencia';
-  if (/despido|finiquito|cotizacion|remuneraci[oó]n|laboral|trabajo|empleador|empleado|jefe|sueldo|indemnizaci[oó]n|contrato de trabajo|carta de despido|teletrabajo|licencia médica|accidente laboral|sindicato|huelga/.test(t)) return 'laboral';
-  if (/alimento|divorcio|separaci[oó]n|cuidado personal|relaci[oó]n directa|matrimonio|nulidad matrimon|violencia intrafamiliar|vif|hijo|custodia|pensi[oó]n alimenticia|mediaci[oó]n familiar|familia|conviviente|pareja/.test(t)) return 'familia';
-  if (/seguro|isapre|fonasa|licencia|reembolso|prestaci[oó]n|cobertura|rechazo.*seguro|metlife|bupa|salud.*reclamo|cmf.*seguro|p[oó]liza|siniestro/.test(t)) return 'seguros';
-  if (/penal|delito|denuncia|querella|robo|hurto|estafa|amenaza|lesion|fiscal|carabinero|pdi|detenid|imputad|víctima.*penal|crimen/.test(t)) return 'penal';
-  if (/recurso de protecci[oó]n|transparencia|funcionario|organismo p[uú]blico|municipalidad|gobierno|contralor[ií]a|sernac|reclamo.*empresa|consumidor|arriendo.*reclamo/.test(t)) return 'administrativo';
-  if (/propiedad|terreno|parcela|sitio|inscripci[oó]n|cbr|conservador|hipoteca|gravamen|escritura|dominio|bien ra[ií]z|expropiaci[oó]n|servidumbre/.test(t)) return 'propiedad';
-
-  // civil como default si no detecta nada específico
+  if (RE_HERENCIA.test(t))  return 'herencia';
+  if (RE_LABORAL.test(t))   return 'laboral';
+  if (RE_FAMILIA.test(t))   return 'familia';
+  if (RE_SEGUROS.test(t))   return 'seguros';
+  if (RE_PENAL.test(t))     return 'penal';
+  if (RE_ADMIN.test(t))     return 'administrativo';
+  if (RE_PROPIEDAD.test(t)) return 'propiedad';
   return 'civil';
 }

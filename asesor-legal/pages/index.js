@@ -48,6 +48,9 @@ export default function Home() {
   const [areaDetectada, setAreaDetectada] = useState('');
   const [dragging, setDragging] = useState(false);
   const [cacheHit, setCacheHit] = useState(false);
+  const [pin, setPin] = useState(() => typeof window !== 'undefined' ? (localStorage.getItem('access_pin') || '') : '');
+  const [pinRequired, setPinRequired] = useState(false);
+  const [pinInput, setPinInput] = useState('');
   const fileInputRef = useRef(null);
   const informeRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -62,8 +65,12 @@ export default function Home() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const b64 = e.target.result.split(',')[1];
-      setFile({ name: f.name, type: f.type || 'application/octet-stream', data: b64, size: f.size });
-      if (f.type.startsWith('image/')) {
+      // Detectar tipo por extensión cuando el navegador no lo informa (ej: .heic, .txt)
+      const extMap = { heic: 'image/jpeg', heif: 'image/jpeg', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', pdf: 'application/pdf', txt: 'text/plain' };
+      const ext = f.name?.split('.').pop()?.toLowerCase() || '';
+      const resolvedType = f.type || extMap[ext] || 'application/octet-stream';
+      setFile({ name: f.name, type: resolvedType, data: b64, size: f.size });
+      if (resolvedType.startsWith('image/')) {
         setFilePreview(e.target.result);
       } else {
         setFilePreview(null);
@@ -80,9 +87,11 @@ export default function Home() {
     setCacheHit(false);
 
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (pin) headers['x-access-pin'] = pin;
       const res = await fetch('/api/legal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           messages,
           area: areaForzada || area || undefined,
@@ -92,6 +101,11 @@ export default function Home() {
         }),
       });
 
+      if (res.status === 401) {
+        setPinRequired(true);
+        setLoading(false);
+        return null;
+      }
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Error del servidor');
@@ -148,7 +162,7 @@ export default function Home() {
       alert('Error: ' + err.message);
       return null;
     }
-  }, [area]);
+  }, [area, pin]);
 
   // ——— Analizar formulario ———
   const analizarForm = async () => {
@@ -170,7 +184,7 @@ export default function Home() {
 
     // Construir mensajes para API (sin el primer mensaje del assistant que es bienvenida)
     const apiMessages = newHistory
-      .filter(m => m.role !== 'assistant' || chatHistory.indexOf(m) > 0)
+      .filter((m, idx) => !(m.role === 'assistant' && idx === 0))
       .map(m => ({ role: m.role, content: m.content || '' }));
 
     const result = await llamarAPI({
@@ -206,6 +220,12 @@ export default function Home() {
     setTimeout(() => informeRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
   };
 
+  const escapeHtml = (s) => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
   // ——— Render secciones del informe ———
   const renderInforme = (texto) => {
     if (!texto) return null;
@@ -226,7 +246,7 @@ export default function Home() {
       const cuerpo = lines.slice(1).join('\n').trim();
       const key = Object.keys(CONFIG).find(k => titulo.toUpperCase().includes(k));
       const cfg = key ? CONFIG[key] : { color: '#374151', tag: '', tagBg: '', tagColor: '' };
-      const cuerpoHtml = cuerpo
+      const cuerpoHtml = escapeHtml(cuerpo)
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/(https?:\/\/[^\s<>"]+)/g, u => `<a href="${u}" target="_blank" rel="noopener" style="color:#1d4ed8;text-decoration:none;border-bottom:1px solid #bfdbfe">${u}</a>`)
         .replace(/\n/g, '<br>');
@@ -472,6 +492,46 @@ export default function Home() {
         )}
 
       </div>
+
+      {/* ——— MODAL PIN ——— */}
+      {pinRequired && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '12px', padding: '2rem', width: '320px', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f1f3d', marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="ti ti-lock" style={{ color: '#c9a84c' }} /> Acceso privado
+            </h3>
+            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '1rem' }}>Ingresa el PIN de acceso para continuar.</p>
+            <input
+              type="password"
+              value={pinInput}
+              onChange={e => setPinInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  localStorage.setItem('access_pin', pinInput);
+                  setPin(pinInput);
+                  setPinRequired(false);
+                  setPinInput('');
+                }
+              }}
+              placeholder="PIN..."
+              autoFocus
+              style={{ marginBottom: '1rem' }}
+            />
+            <button
+              className="btn-primary"
+              style={{ marginTop: 0 }}
+              onClick={() => {
+                localStorage.setItem('access_pin', pinInput);
+                setPin(pinInput);
+                setPinRequired(false);
+                setPinInput('');
+              }}
+            >
+              Ingresar
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
