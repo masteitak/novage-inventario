@@ -185,6 +185,10 @@ tr:hover td{background:#fafaf8}
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
     Bodega / Traslados
   </button>
+  <button class="tab" onclick="goPage('clinica',this)" id="tab-clinica">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+    Clínica / Sueros
+  </button>
   <button class="tab" onclick="goPage('alertas',this)">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14V11a6 6 0 10-12 0v3a2 2 0 01-.6 1.6L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
     Alertas
@@ -395,9 +399,82 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 
+<!-- ═══════════════════ CLÍNICA / SUEROS ═══════════════════ -->
+<div class="page" id="page-clinica">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <div>
+      <div style="font-size:16px;font-weight:600">Clínica / Sueros — Inventario Medilink</div>
+      <div style="font-size:12px;color:var(--text2)" id="cl-last-update">Cargado desde Medilink</div>
+    </div>
+    <button class="btn btn-primary" onclick="openAplicarSuero()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Aplicar Suero a Paciente
+    </button>
+  </div>
+  <div class="metrics" id="cl-metrics"></div>
+  <!-- Alertas Medilink -->
+  <div class="card" id="cl-alertas-card" style="margin-bottom:1rem;border-color:#fca5a5">
+    <div class="card-header" style="background:#fff5f5">
+      <span class="card-title">⚠️ Alertas Medilink — Semaforización Rojo / Amarillo</span>
+    </div>
+    <div class="card-body" id="cl-alertas-body"></div>
+  </div>
+  <!-- Inventario por bodega -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">💉 Box Suero — Insumos</span>
+        <span id="cl-insumos-count" class="badge badge-blue"></span>
+      </div>
+      <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Insumo</th><th>Lote</th><th>Stock</th><th>Mín.</th><th>Vence</th><th>Estado</th></tr></thead>
+          <tbody id="cl-insumos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🧪 Espacio Novage — Medicamentos</span>
+        <span id="cl-meds-count" class="badge badge-blue"></span>
+      </div>
+      <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Medicamento</th><th>Lote</th><th>Stock</th><th>Mín.</th><th>Vence</th><th>Semáforo</th></tr></thead>
+          <tbody id="cl-meds-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Registro de aplicaciones -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Registro de aplicaciones de suero</span>
+      <button class="btn btn-sm" onclick="exportSuerosCSV()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Exportar
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Fecha / Hora</th><th>Paciente</th><th>Suero</th><th>Bránula</th><th>Medicamentos agregados</th><th>Insumos descontados</th></tr></thead>
+        <tbody id="cl-suero-log"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════ ALERTAS ═══════════════════ -->
 <div class="page" id="page-alertas">
   <div class="metrics" id="alert-metrics"></div>
+  <!-- ALERTA MEDILINK -->
+  <div class="card" id="alert-medilink-card" style="border-color:#fca5a5;margin-bottom:1rem">
+    <div class="card-header" style="background:#fff5f5">
+      <span class="card-title">⚗️ Alertas Medilink — Vencidos / Semaforización Rojo-Amarillo</span>
+      <button class="btn btn-sm" onclick="goPage('clinica',document.getElementById('tab-clinica'))">Ver Clínica →</button>
+    </div>
+    <div class="card-body" id="alert-medilink-body"></div>
+  </div>
   <!-- ALERTA PRINCIPAL: Por vencer sin oferta -->
   <div class="card" style="border-color:#fcd34d;margin-bottom:1rem">
     <div class="card-header" style="background:#fefce8">
@@ -509,6 +586,57 @@ tr:hover td{background:#fafaf8}
   </div>
   <div style="margin-top:1rem;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);font-size:11px;color:var(--text3)">
     💾 Los datos se guardan automáticamente en este navegador. Si cambias de computador, deberás exportar el CSV primero.
+  </div>
+</div>
+
+<!-- MODAL APLICAR SUERO -->
+<div class="modal-bg" id="modal-suero">
+  <div class="modal" style="width:520px;max-width:97vw">
+    <div class="modal-head">
+      <span class="modal-title">💉 Aplicar Suero a Paciente</span>
+      <button class="btn btn-sm" onclick="closeModal('modal-suero')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nombre Paciente</label>
+        <input type="text" id="su-paciente" placeholder="Ej: María González" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Suero</label>
+          <select id="su-tipo" onchange="updateSueroPreview()">
+            <option value="ml-3">Suero 250cc</option>
+            <option value="ml-4">Suero 500cc</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bránula</label>
+          <select id="su-branula" onchange="updateSueroPreview()">
+            <option value="ml-1">Bránula #20</option>
+            <option value="ml-16">Bránula #22</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Medicamentos a agregar al suero (selecciona uno o más)</label>
+        <div id="su-meds-list" style="max-height:160px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:8px;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas clínicas</label>
+        <textarea id="su-notas" rows="2" placeholder="Ej: Paciente toleró bien, sin reacciones..." style="resize:vertical;font-size:12px"></textarea>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:12px;margin-top:4px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">INSUMOS A DESCONTAR DEL STOCK</div>
+        <div id="su-preview" style="font-size:12px;line-height:1.9"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-suero')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarSuero()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Confirmar aplicación
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1348,7 +1476,7 @@ async function syncAddCierre(c){
 }
 
 function renderAll(){
-  renderInv(); renderPosGrid(); renderAlertas(); renderContab(); renderBodega();
+  renderInv(); renderPosGrid(); renderAlertas(); renderAlertasMedilink(); renderContab(); renderBodega();
 }
 
 // Auto-save después de cada operación crítica
@@ -1535,6 +1663,367 @@ function exportCierreCSV(){
   a.click();
 }
 
+// ═══ MEDILINK DATA ═══
+const MEDILINK_RAW = [
+  // ── Box Suero materiales (insumos) ──
+  {id:'ml-1', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Branula #20', lote:'4600002067', cantidad:97, vencimiento:'2030-05-31', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 50', stockSeguridad:20},
+  {id:'ml-2', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Bajada de suero', lote:'4600002045', cantidad:16, vencimiento:'2030-03-31', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 25', stockSeguridad:10},
+  {id:'ml-3', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Suero 250cc', lote:'75WG0914', cantidad:19, vencimiento:'2028-07-31', semaforo:'Verde', marca:'apiroflex', presentacion:'Caja x 20', stockSeguridad:10},
+  {id:'ml-4', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Suero 500cc', lote:'75WC0260', cantidad:26, vencimiento:'2028-03-31', semaforo:'Verde', marca:'apiroflex', presentacion:'Caja x 20', stockSeguridad:10},
+  {id:'ml-5', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Gasa 7,5x 7,5', lote:'4600001460', cantidad:21, vencimiento:'2029-04-30', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 50', stockSeguridad:10},
+  {id:'ml-6', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Gasa 5x5', lote:'231222', cantidad:177, vencimiento:'2029-03-31', semaforo:'Verde', marca:'geerdink', presentacion:'Caja x 50', stockSeguridad:20},
+  {id:'ml-7', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Tela adhesiva', lote:'4600001747', cantidad:6, vencimiento:'2029-09-30', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 12', stockSeguridad:2},
+  {id:'ml-8', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Jeringa 3ml', lote:'4600002154', cantidad:76, vencimiento:'2030-05-31', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 50', stockSeguridad:20},
+  {id:'ml-9', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Jeringa 1ml', lote:'25D0601J', cantidad:300, vencimiento:'2030-03-31', semaforo:'Verde', marca:'', presentacion:'Caja x 100', stockSeguridad:50},
+  {id:'ml-10', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Jeringa 10ml', lote:'4600002154', cantidad:75, vencimiento:'2030-05-31', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 100', stockSeguridad:20},
+  {id:'ml-11', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Jeringa 20ml', lote:'4600002316', cantidad:5, vencimiento:'2030-09-30', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 50', stockSeguridad:5},
+  {id:'ml-12', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Torulas de algodón', lote:'4600001851', cantidad:30, vencimiento:'2029-10-31', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 100', stockSeguridad:20},
+  {id:'ml-13', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Alcohol Pad', lote:'SH25011', cantidad:55, vencimiento:'2030-02-28', semaforo:'Verde', marca:'smartmed', presentacion:'Caja x 100', stockSeguridad:20},
+  {id:'ml-14', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Parche redondo', lote:'4600002154', cantidad:102, vencimiento:'2030-05-30', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 100', stockSeguridad:20},
+  {id:'ml-15', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Llave 3 pasos', lote:'4600001301', cantidad:10, vencimiento:'2029-04-30', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 50', stockSeguridad:10},
+  {id:'ml-16', bodega:'Box Suero materiales', tipo:'Insumo', nombre:'Branula #22', lote:'4600002067', cantidad:64, vencimiento:'2030-05-31', semaforo:'Verde', marca:'cranberry', presentacion:'Caja x 50', stockSeguridad:20},
+  // ── Espacio Novage — Medicamentos ──
+  {id:'ml-17', bodega:'Espacio Novage', tipo:'No definido', nombre:'L CARNITINA', lote:'24OCT039', cantidad:24, vencimiento:'2027-10-31', semaforo:'Verde', marca:'', presentacion:'', stockSeguridad:0},
+  {id:'ml-18', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'SILANOL', lote:'25MAR007', cantidad:10, vencimiento:'2028-03-26', semaforo:'Verde', marca:'', presentacion:'Ampolla x 10', stockSeguridad:10},
+  {id:'ml-19', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'M complex plus', lote:'22dic112', cantidad:7, vencimiento:'2026-12-31', semaforo:'Verde', marca:'pineda', presentacion:'Ampolla x 10', stockSeguridad:10},
+  {id:'ml-20', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'B-complex', lote:'25JUN026', cantidad:1, vencimiento:'2027-06-30', semaforo:'Verde', marca:'Pineda', presentacion:'vial x 1', stockSeguridad:1},
+  {id:'ml-21', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'EDTA PLUS', lote:'24AGO034', cantidad:7, vencimiento:'2026-08-31', semaforo:'Amarillo', marca:'PINEDA', presentacion:'vial x 1', principioActivo:'EDTA disodico', stockSeguridad:1},
+  {id:'ml-22', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Vitamina C (lote JUN)', lote:'25JUN027', cantidad:3, vencimiento:'2028-06-30', semaforo:'Verde', marca:'PINEDA', presentacion:'vial x 1', principioActivo:'ascorbato de sodio', stockSeguridad:1},
+  {id:'ml-23', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Vitamina C (lote JUL)', lote:'25JUL042', cantidad:3, vencimiento:'2028-07-31', semaforo:'Verde', marca:'PINEDA', presentacion:'vial x 1', principioActivo:'ascorbato de sodio', stockSeguridad:1},
+  {id:'ml-24', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Calcio cloruro', lote:'93002280', cantidad:1, vencimiento:'', semaforo:'Rojo', marca:'', presentacion:'Ampolla x 1', principioActivo:'calcio 100mg', stockSeguridad:5},
+  {id:'ml-25', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Fosfatidilcolina', lote:'93009801', cantidad:9, vencimiento:'', semaforo:'Rojo', marca:'', presentacion:'Frasco x 1', principioActivo:'fosfatidilcolina 50mg+ desoxicolato 30mg', stockSeguridad:5},
+  {id:'ml-26', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'G-PEEL (ac. retinoico 2%)', lote:'GPEEL-0126', cantidad:2, vencimiento:'2026-04-30', semaforo:'Rojo', marca:'', presentacion:'Frasco x 1', principioActivo:'ac.retinoico 2%', stockSeguridad:2},
+  {id:'ml-27', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'G-PEEL (glicolico 10%)', lote:'GPEEL-0126', cantidad:9, vencimiento:'2026-04-30', semaforo:'Rojo', marca:'', presentacion:'Frasco x 1', principioActivo:'Glicolico 10%', stockSeguridad:5},
+  {id:'ml-28', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Md:complex', lote:'batch:241', cantidad:4, vencimiento:'2027-05-30', semaforo:'Verde', marca:'ceuticals', presentacion:'Frasco x 5', stockSeguridad:2},
+  {id:'ml-29', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Pink aging', lote:'25GO2', cantidad:3, vencimiento:'2028-07-13', semaforo:'Verde', marca:'ceuticals', presentacion:'Frasco x 5', stockSeguridad:3},
+  {id:'ml-30', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Md:peel intimate', lote:'231', cantidad:4, vencimiento:'2026-03-31', semaforo:'Rojo', marca:'ceuticals', presentacion:'Frasco x 5', stockSeguridad:2},
+  {id:'ml-31', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Md:complex Firming-Regen', lote:'221', cantidad:3, vencimiento:'2027-08-31', semaforo:'Verde', marca:'ceuticals', presentacion:'Frasco x 5', stockSeguridad:2},
+  {id:'ml-32', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Md:complex Antiage intensive', lote:'221', cantidad:4, vencimiento:'2027-11-30', semaforo:'Verde', marca:'ceuticals', presentacion:'Frasco x 5', stockSeguridad:2},
+  {id:'ml-33', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Md:complex (lote 241)', lote:'241', cantidad:2, vencimiento:'2027-09-30', semaforo:'Verde', marca:'ceuticals', presentacion:'Frasco x 5', stockSeguridad:2},
+  {id:'ml-34', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'Carnosin Plus', lote:'25MAR007', cantidad:6, vencimiento:'2027-03-31', semaforo:'Verde', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'L-carnosina', stockSeguridad:10},
+  {id:'ml-35', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'5-HTP Complex', lote:'24FEB002', cantidad:15, vencimiento:'2028-02-29', semaforo:'Verde', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'5-hidroxitriptofano, piridoxina', stockSeguridad:10},
+  {id:'ml-36', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'H.M.B', lote:'24MAR008', cantidad:22, vencimiento:'2027-03-31', semaforo:'Verde', marca:'Pineda', presentacion:'Ampolla x 10', principioActivo:'B-hidroxi B-Metilbutirato', stockSeguridad:10},
+  {id:'ml-37', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'TIMOX', lote:'24MAR009', cantidad:16, vencimiento:'2028-03-31', semaforo:'Verde', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'timomodulina', stockSeguridad:10},
+  {id:'ml-38', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'GAG MESOGLI-K', lote:'22AGO077', cantidad:0, vencimiento:'2025-08-31', semaforo:'Rojo', marca:'', presentacion:'Ampolla x 10', stockSeguridad:10},
+  {id:'ml-39', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'L-TEANINA', lote:'22DIC117', cantidad:30, vencimiento:'2026-12-31', semaforo:'Verde', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'L-teanina', stockSeguridad:10},
+  {id:'ml-40', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'SULFATO DE MAGNESIO', lote:'24OCT041', cantidad:5, vencimiento:'2026-10-31', semaforo:'Amarillo', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'sulfato de magnesio', stockSeguridad:10},
+  {id:'ml-41', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'AMINOACID COMPLEX (lote NOV)', lote:'24NOV054', cantidad:10, vencimiento:'2027-11-30', semaforo:'Verde', marca:'', presentacion:'Ampolla x 10', principioActivo:'L-arginina, L-lisina, L-prolina...', stockSeguridad:10},
+  {id:'ml-42', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'AMINOACID COMPLEX (lote SEP)', lote:'24SEP038', cantidad:5, vencimiento:'2027-09-30', semaforo:'Verde', marca:'', presentacion:'Ampolla x 10', principioActivo:'L-arginina, L-lisina, L-prolina...', stockSeguridad:10},
+  {id:'ml-43', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'GLUTATION (lote NOV)', lote:'24NOV049', cantidad:5, vencimiento:'2026-11-30', semaforo:'Verde', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'Glutation reducido', stockSeguridad:10},
+  {id:'ml-44', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'GLUTATION (lote JUL)', lote:'25JUL036', cantidad:8, vencimiento:'2027-07-31', semaforo:'Verde', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'Glutation reducido', stockSeguridad:10},
+  {id:'ml-45', bodega:'Espacio Novage', tipo:'Medicamento', nombre:'L-ARGININA', lote:'24AGO033', cantidad:16, vencimiento:'2027-08-31', semaforo:'Verde', marca:'PINEDA', presentacion:'Ampolla x 10', principioActivo:'L-arginina, theophyllisilane C', stockSeguridad:10},
+];
+
+let medilink_products = MEDILINK_RAW.map(p => ({...p}));
+let sueroApplications = [];
+const LS_MEDILINK = 'nvg_medilink_v1';
+const LS_SUEROS   = 'nvg_sueros_v1';
+
+function mlById(id){ return medilink_products.find(p => p.id === id); }
+
+function semaforoBadge(s){
+  if(s === 'Rojo')    return '<span class="badge badge-out">🔴 Rojo</span>';
+  if(s === 'Amarillo') return '<span class="badge badge-low">🟡 Amarillo</span>';
+  return '<span class="badge badge-ok">🟢 Verde</span>';
+}
+
+function mlStockBadge(p){
+  if(p.cantidad === 0) return '<span class="badge badge-out">Sin stock</span>';
+  if(p.cantidad <= p.stockSeguridad) return `<span class="badge badge-low">${p.cantidad} bajo</span>`;
+  return `<span class="badge badge-ok">${p.cantidad}</span>`;
+}
+
+function mlVencBadge(v){
+  if(!v) return '<span class="badge badge-out">Sin fecha</span>';
+  const d = new Date(v);
+  if(isNaN(d)) return '<span class="badge badge-gray">—</span>';
+  const diff = Math.floor((d - TODAY)/864e5);
+  if(diff < 0) return `<span class="badge badge-vencido">⚠️ VENCIDO</span>`;
+  if(diff < 90) return `<span class="badge badge-proximo">⚡ ${diff}d</span>`;
+  return `<span class="badge badge-vigente">${fmtDate(v)}</span>`;
+}
+
+// ─── CLÍNICA / SUEROS ───
+function renderClinica(){
+  const insumos = medilink_products.filter(p => p.bodega === 'Box Suero materiales');
+  const meds    = medilink_products.filter(p => p.bodega === 'Espacio Novage');
+
+  // Metrics
+  const alertaRojo = medilink_products.filter(p => p.semaforo === 'Rojo');
+  const alertaAmar = medilink_products.filter(p => p.semaforo === 'Amarillo');
+  const sinStock   = medilink_products.filter(p => p.cantidad === 0);
+  const bajosStock = medilink_products.filter(p => p.cantidad > 0 && p.cantidad <= p.stockSeguridad);
+  const vencidos   = medilink_products.filter(p => {
+    if(!p.vencimiento) return false;
+    return Math.floor((new Date(p.vencimiento) - TODAY)/864e5) < 0;
+  });
+
+  document.getElementById('cl-metrics').innerHTML = `
+    <div class="metric" style="${alertaRojo.length?'border-color:#fca5a5':''}">
+      <div class="metric-label">🔴 Semáforo Rojo</div>
+      <div class="metric-value" style="color:${alertaRojo.length?'var(--red)':'var(--green)'}">${alertaRojo.length}</div>
+    </div>
+    <div class="metric" style="${alertaAmar.length?'border-color:#fcd34d':''}">
+      <div class="metric-label">🟡 Semáforo Amarillo</div>
+      <div class="metric-value" style="color:${alertaAmar.length?'var(--amber)':'var(--green)'}">${alertaAmar.length}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">⚠️ Vencidos</div>
+      <div class="metric-value" style="color:var(--red)">${vencidos.length}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">📉 Sin stock</div>
+      <div class="metric-value" style="color:var(--red)">${sinStock.length}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">🔻 Stock bajo</div>
+      <div class="metric-value" style="color:var(--amber)">${bajosStock.length}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">💉 Sueros aplicados</div>
+      <div class="metric-value">${sueroApplications.length}</div>
+    </div>
+  `;
+
+  // Alertas card
+  const alertas = medilink_products.filter(p => p.semaforo !== 'Verde' || (p.vencimiento && Math.floor((new Date(p.vencimiento)-TODAY)/864e5) < 0));
+  const alertasCard = document.getElementById('cl-alertas-card');
+  const alertasBody = document.getElementById('cl-alertas-body');
+  if(!alertas.length){
+    alertasCard.style.borderColor = 'var(--border)';
+    alertasCard.querySelector('.card-header').style.background = 'var(--surface2)';
+    alertasBody.innerHTML = '<p style="color:var(--text3);font-size:13px">Sin alertas activas en Medilink ✅</p>';
+  } else {
+    alertasCard.style.borderColor = '#fca5a5';
+    alertasCard.querySelector('.card-header').style.background = '#fff5f5';
+    alertasBody.innerHTML = alertas.map(p => {
+      const isRojo = p.semaforo === 'Rojo' || (p.vencimiento && Math.floor((new Date(p.vencimiento)-TODAY)/864e5) < 0);
+      const cls = isRojo ? 'alert-vencido' : 'alert-proximo';
+      const icon = isRojo ? '🔴' : '🟡';
+      const diff = p.vencimiento ? Math.floor((new Date(p.vencimiento)-TODAY)/864e5) : null;
+      const vencMsg = diff !== null ? (diff < 0 ? ` · ⚠️ VENCIDO hace ${Math.abs(diff)} días` : ` · vence en ${diff} días`) : ' · Sin fecha vencimiento';
+      return `<div class="alert-row ${cls}"><span>${icon}</span>
+        <div><b>${p.nombre}</b> <span class="badge badge-gray">${p.bodega}</span><br>
+        <small>Lote: ${p.lote} · Stock: ${p.cantidad} · Semáforo: ${p.semaforo}${vencMsg}</small></div></div>`;
+    }).join('');
+  }
+
+  // Insumos table
+  document.getElementById('cl-insumos-count').textContent = insumos.length + ' items';
+  document.getElementById('cl-insumos-tbody').innerHTML = insumos.map(p => `<tr>
+    <td style="font-weight:500;font-size:12px">${p.nombre}<br><span style="font-size:10px;color:var(--text3)">${p.presentacion||''} ${p.marca?'· '+p.marca:''}</span></td>
+    <td class="mono">${p.lote}</td>
+    <td style="text-align:center">${mlStockBadge(p)}</td>
+    <td style="text-align:center;color:var(--text2);font-size:11px">${p.stockSeguridad}</td>
+    <td style="font-size:11px">${mlVencBadge(p.vencimiento)}</td>
+    <td>${semaforoBadge(p.semaforo)}</td>
+  </tr>`).join('');
+
+  // Medicamentos table
+  document.getElementById('cl-meds-count').textContent = meds.length + ' items';
+  document.getElementById('cl-meds-tbody').innerHTML = meds.map(p => `<tr>
+    <td style="font-weight:500;font-size:12px">${p.nombre}<br><span style="font-size:10px;color:var(--text3)">${p.presentacion||''} ${p.principioActivo?'· '+p.principioActivo.substring(0,30):''}</span></td>
+    <td class="mono">${p.lote}</td>
+    <td style="text-align:center">${mlStockBadge(p)}</td>
+    <td style="text-align:center;color:var(--text2);font-size:11px">${p.stockSeguridad}</td>
+    <td style="font-size:11px">${mlVencBadge(p.vencimiento)}</td>
+    <td>${semaforoBadge(p.semaforo)}</td>
+  </tr>`).join('');
+
+  renderSueroLog();
+}
+
+function renderSueroLog(){
+  const tb = document.getElementById('cl-suero-log');
+  if(!sueroApplications.length){
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text3)">Sin aplicaciones registradas</td></tr>';
+    return;
+  }
+  tb.innerHTML = sueroApplications.map((a,i) => `<tr>
+    <td class="mono">#${String(sueroApplications.length - i).padStart(3,'0')}</td>
+    <td style="font-size:11px">${a.fecha}</td>
+    <td style="font-weight:500">${a.paciente}</td>
+    <td><span class="badge badge-blue">${a.sueroNombre}</span></td>
+    <td>${a.branulaId ? mlById(a.branulaId)?.nombre || '—' : '—'}</td>
+    <td style="font-size:11px">${a.medicamentos.length ? a.medicamentos.join(', ') : '<span style="color:var(--text3)">Sin medicamentos</span>'}</td>
+    <td style="font-size:11px">${a.insumos.map(x=>x.qty+'× '+x.nombre).join(', ')}</td>
+  </tr>`).join('');
+}
+
+// Alertas Medilink en tab Alertas
+function renderAlertasMedilink(){
+  const body = document.getElementById('alert-medilink-body');
+  if(!body) return;
+  const alertas = medilink_products.filter(p => {
+    if(p.semaforo !== 'Verde') return true;
+    if(p.cantidad === 0) return true;
+    if(p.vencimiento && Math.floor((new Date(p.vencimiento)-TODAY)/864e5) < 0) return true;
+    return false;
+  });
+  if(!alertas.length){
+    document.getElementById('alert-medilink-card').style.borderColor = 'var(--border)';
+    body.innerHTML = '<p style="color:var(--text3);font-size:13px">Medilink sin alertas críticas ✅</p>';
+    return;
+  }
+  body.innerHTML = alertas.map(p => {
+    const isRojo = p.semaforo === 'Rojo' || (p.vencimiento && Math.floor((new Date(p.vencimiento)-TODAY)/864e5) < 0) || p.cantidad === 0;
+    const cls = isRojo ? 'alert-vencido' : 'alert-proximo';
+    const icon = isRojo ? '🔴' : '🟡';
+    const diff = p.vencimiento ? Math.floor((new Date(p.vencimiento)-TODAY)/864e5) : null;
+    const vencMsg = diff !== null ? (diff < 0 ? ` · VENCIDO hace ${Math.abs(diff)} días` : ` · vence en ${diff}d`) : ' · Sin fecha';
+    return `<div class="alert-row ${cls}"><span>${icon}</span>
+      <div><b>${p.nombre}</b> <span class="badge badge-gray" style="font-size:10px">${p.bodega}</span>
+      <br><small>Stock: ${p.cantidad}${vencMsg} · Semáforo: ${p.semaforo}</small></div></div>`;
+  }).join('');
+}
+
+// ─── MODAL APLICAR SUERO ───
+function openAplicarSuero(){
+  // Fill meds list
+  const meds = medilink_products.filter(p => p.bodega === 'Espacio Novage' && p.cantidad > 0);
+  document.getElementById('su-meds-list').innerHTML = meds.map(p =>
+    `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:4px">
+      <input type="checkbox" value="${p.id}" onchange="updateSueroPreview()" style="width:auto">
+      <span><b>${p.nombre}</b> · ${p.presentacion||''} · Stock: ${p.cantidad}</span>
+    </label>`
+  ).join('');
+  document.getElementById('su-paciente').value = '';
+  document.getElementById('su-notas').value = '';
+  updateSueroPreview();
+  document.getElementById('modal-suero').classList.add('open');
+  setTimeout(()=>document.getElementById('su-paciente').focus(), 100);
+}
+
+function buildSueroKit(){
+  const sueroId  = document.getElementById('su-tipo').value;
+  const branulaId = document.getElementById('su-branula').value;
+  // Standard kit auto-deducted
+  const kit = [
+    {id: sueroId,   qty: 1},
+    {id: branulaId, qty: 1},
+    {id: 'ml-2',    qty: 1},  // Bajada de suero
+    {id: 'ml-14',   qty: 1},  // Parche redondo
+    {id: 'ml-13',   qty: 2},  // Alcohol Pad x2
+    {id: 'ml-12',   qty: 1},  // Torula de algodón
+  ];
+  return kit;
+}
+
+function updateSueroPreview(){
+  const kit = buildSueroKit();
+  const checkedMeds = [...document.querySelectorAll('#su-meds-list input:checked')].map(c => c.value);
+  let html = '<table style="width:100%;border-collapse:collapse">';
+  kit.forEach(item => {
+    const p = mlById(item.id);
+    if(!p) return;
+    const ok = p.cantidad >= item.qty;
+    const color = ok ? 'var(--text)' : 'var(--red)';
+    html += `<tr>
+      <td style="font-size:12px;color:${color};padding:1px 0">${item.qty}× ${p.nombre}</td>
+      <td style="font-size:11px;color:var(--text3);text-align:right">Stock actual: ${p.cantidad}${!ok?' ⚠️ INSUFICIENTE':''}</td>
+    </tr>`;
+  });
+  checkedMeds.forEach(id => {
+    const p = mlById(id);
+    if(!p) return;
+    const ok = p.cantidad >= 1;
+    const color = ok ? 'var(--blue)' : 'var(--red)';
+    html += `<tr>
+      <td style="font-size:12px;color:${color};padding:1px 0">1× ${p.nombre} <span style="font-size:10px;background:var(--blue-bg);color:var(--blue);padding:1px 5px;border-radius:10px">medicamento</span></td>
+      <td style="font-size:11px;color:var(--text3);text-align:right">Stock: ${p.cantidad}${!ok?' ⚠️ INSUFICIENTE':''}</td>
+    </tr>`;
+  });
+  html += '</table>';
+  document.getElementById('su-preview').innerHTML = html;
+}
+
+function confirmarSuero(){
+  const paciente = document.getElementById('su-paciente').value.trim();
+  if(!paciente){ alert('Ingresa el nombre de la paciente'); return; }
+
+  const kit = buildSueroKit();
+  const checkedMeds = [...document.querySelectorAll('#su-meds-list input:checked')].map(c => c.value);
+
+  // Verificar stock
+  const allItems = [...kit, ...checkedMeds.map(id => ({id, qty:1}))];
+  const insuf = allItems.filter(item => {
+    const p = mlById(item.id);
+    return !p || p.cantidad < item.qty;
+  });
+  if(insuf.length){
+    const nombres = insuf.map(item => mlById(item.id)?.nombre || item.id).join(', ');
+    if(!confirm(`⚠️ Stock insuficiente en:\n${nombres}\n\n¿Deseas continuar igualmente?`)) return;
+  }
+
+  // Descontar stock
+  const insumos_descontados = [];
+  allItems.forEach(item => {
+    const p = mlById(item.id);
+    if(!p) return;
+    p.cantidad = Math.max(0, p.cantidad - item.qty);
+    insumos_descontados.push({id: item.id, qty: item.qty, nombre: p.nombre});
+  });
+
+  const sueroP = mlById(document.getElementById('su-tipo').value);
+  const aplicacion = {
+    fecha: new Date().toLocaleString('es-CL'),
+    paciente,
+    sueroNombre: sueroP?.nombre || '—',
+    branulaId: document.getElementById('su-branula').value,
+    medicamentos: checkedMeds.map(id => mlById(id)?.nombre || id),
+    insumos: insumos_descontados,
+    notas: document.getElementById('su-notas').value.trim(),
+  };
+
+  sueroApplications.unshift(aplicacion);
+  saveMedilinkState();
+  closeModal('modal-suero');
+  renderClinica();
+
+  // Feedback breve
+  const msg = document.createElement('div');
+  msg.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.2)';
+  msg.textContent = `✅ Suero aplicado a ${paciente} — stock descontado`;
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 4000);
+}
+
+function exportSuerosCSV(){
+  const rows = [['#','Fecha','Paciente','Suero','Bránula','Medicamentos','Insumos descontados','Notas']];
+  sueroApplications.forEach((a,i) => rows.push([
+    sueroApplications.length - i,
+    a.fecha, a.paciente, a.sueroNombre,
+    mlById(a.branulaId)?.nombre || '—',
+    a.medicamentos.join('; '),
+    a.insumos.map(x=>x.qty+'x '+x.nombre).join('; '),
+    a.notas || ''
+  ]));
+  const csv = rows.map(r => r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
+  a.download = 'novage_sueros_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+}
+
+function saveMedilinkState(){
+  try{
+    const stockMap = {};
+    medilink_products.forEach(p => { stockMap[p.id] = p.cantidad; });
+    localStorage.setItem(LS_MEDILINK, JSON.stringify(stockMap));
+    localStorage.setItem(LS_SUEROS, JSON.stringify(sueroApplications));
+  }catch(e){}
+}
+
+function loadMedilinkState(){
+  try{
+    const stockMap = JSON.parse(localStorage.getItem(LS_MEDILINK)||'{}');
+    medilink_products.forEach(p => {
+      if(stockMap[p.id] !== undefined) p.cantidad = stockMap[p.id];
+    });
+    sueroApplications = JSON.parse(localStorage.getItem(LS_SUEROS)||'[]');
+  }catch(e){}
+}
+
 // ─── NAV ───
 function goPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1542,7 +2031,8 @@ function goPage(id,btn){
   document.getElementById('page-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='bodega')renderBodega();
-  if(id==='alertas')renderAlertas();
+  if(id==='clinica')renderClinica();
+  if(id==='alertas'){renderAlertas();renderAlertasMedilink();}
   if(id==='contab')renderContab();
   if(id==='cierre')renderCierre();
   if(id==='pos'){renderPosGrid();setTimeout(()=>document.getElementById('scanner-input').focus(),100);}
@@ -1580,10 +2070,12 @@ saveProduct = function(){
 };
 
 // ─── INIT ───
+loadMedilinkState();
 populateBrands();
 renderInv();
 renderPosGrid();
 renderAlertas();
+renderAlertasMedilink();
 renderContab();
 renderBodega();
 loadState(); // async — actualiza desde Sheets en background

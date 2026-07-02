@@ -501,6 +501,14 @@ tr:hover td{background:#fafaf8}
 <!-- ═══════════════════ ALERTAS ═══════════════════ -->
 <div class="page" id="page-alertas">
   <div class="metrics" id="alert-metrics"></div>
+  <!-- ALERTAS CLÍNICAS MEDILINK -->
+  <div class="card" style="border-color:#fca5a5;margin-bottom:1rem">
+    <div class="card-header" style="background:#fff5f5">
+      <span class="card-title">⚗️ Alertas clínicas Medilink — Semáforo / Vencimientos / Stock</span>
+      <button class="btn btn-sm" onclick="goPage('insumos',document.querySelector('.tab[onclick*=insumos]'))">Ver Insumos →</button>
+    </div>
+    <div class="card-body" id="alert-clinico-body"></div>
+  </div>
   <!-- ALERTA PRINCIPAL: Por vencer sin oferta -->
   <div class="card" style="border-color:#fcd34d;margin-bottom:1rem">
     <div class="card-header" style="background:#fefce8">
@@ -608,12 +616,15 @@ tr:hover td{background:#fafaf8}
   <div class="metrics" id="ins-metrics"></div>
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Insumos clínicos de sueroterapia</span>
-      <button class="btn btn-primary btn-sm" onclick="openAddSupply()">Agregar insumo</button>
+      <span class="card-title">Insumos clínicos de sueroterapia — Inventario Medilink</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-primary btn-sm" onclick="openAplicarSuero()">💉 Aplicar Suero a Paciente</button>
+        <button class="btn btn-sm" onclick="openAddSupply()">Agregar insumo</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Insumo</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Costo</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>Insumo</th><th>Categoría</th><th>Lote</th><th>Stock</th><th>Mínimo</th><th>Vencimiento</th><th>Semáforo</th><th>Costo</th><th></th></tr></thead>
         <tbody id="ins-tbody"></tbody>
       </table>
     </div>
@@ -652,6 +663,54 @@ tr:hover td{background:#fafaf8}
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('modal-supply')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveSupply()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL APLICAR SUERO A PACIENTE -->
+<div class="modal-bg" id="modal-aplicar-suero">
+  <div class="modal" style="width:520px;max-width:97vw">
+    <div class="modal-head">
+      <span class="modal-title">💉 Aplicar Suero a Paciente</span>
+      <button class="btn btn-sm" onclick="closeModal('modal-aplicar-suero')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nombre Paciente</label>
+        <input type="text" id="as-paciente" placeholder="Ej: María González" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Suero</label>
+          <select id="as-suero" onchange="previewSueroKit()">
+            <option value="Suero 250cc">Suero 250cc</option>
+            <option value="Suero 500cc">Suero 500cc</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bránula</label>
+          <select id="as-branula" onchange="previewSueroKit()">
+            <option value="Branula #20">Bránula #20</option>
+            <option value="Branula #22">Bránula #22</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ampollas / activos a agregar al suero</label>
+        <div id="as-meds-list" style="max-height:160px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:8px;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas clínicas</label>
+        <textarea id="as-notas" rows="2" placeholder="Ej: Paciente toleró bien, sin reacciones..." style="resize:vertical;font-size:12px"></textarea>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">INSUMOS A DESCONTAR DEL STOCK (automático)</div>
+        <div id="as-preview" style="line-height:1.9"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-aplicar-suero')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAplicarSuero()">Confirmar aplicación</button>
     </div>
   </div>
 </div>
@@ -1825,9 +1884,11 @@ function renderSupplies(){
   if(!tbody || !log || !metrics) return;
   const low = supplies.filter(s=>(s.stock||0)>0 && (s.stock||0)<=(s.minstock||0)).length;
   const zero = supplies.filter(s=>(s.stock||0)===0).length;
+  const rojos = supplies.filter(s=>supplySemaforo(s)==='Rojo').length;
+  const amarillos = supplies.filter(s=>supplySemaforo(s)==='Amarillo').length;
   const totalCost = supplies.reduce((a,s)=>a+((s.stock||0)*(s.cost||0)),0);
-  metrics.innerHTML = `<div class="metric"><div class="metric-label">Insumos clinicos</div><div class="metric-value">${supplies.length}</div></div><div class="metric"><div class="metric-label">Stock bajo</div><div class="metric-value" style="color:var(--amber)">${low}</div></div><div class="metric"><div class="metric-label">Sin stock</div><div class="metric-value" style="color:var(--red)">${zero}</div></div><div class="metric"><div class="metric-label">Valor clinico</div><div class="metric-value" style="font-size:16px">${fmt(totalCost)}</div></div>`;
-  tbody.innerHTML = supplies.length ? supplies.map(s=>`<tr><td style="font-weight:500">${s.name}</td><td>${s.cat}</td><td>${s.stock||0}</td><td>${s.minstock||0}</td><td>${fmt(s.cost||0)}</td><td>${supplyStatus(s)}</td><td><button class="btn btn-sm" onclick="editSupply(${s.id})">✎</button> <button class="btn btn-sm btn-danger" onclick="deleteSupply(${s.id})">🗑</button></td></tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">Sin insumos clinicos registrados</td></tr>';
+  metrics.innerHTML = `<div class="metric"><div class="metric-label">Insumos clinicos</div><div class="metric-value">${supplies.length}</div></div><div class="metric" style="${rojos?'border-color:#fca5a5':''}"><div class="metric-label">🔴 Semáforo Rojo</div><div class="metric-value" style="color:${rojos?'var(--red)':'var(--green)'}">${rojos}</div></div><div class="metric" style="${amarillos?'border-color:#fcd34d':''}"><div class="metric-label">🟡 Semáforo Amarillo</div><div class="metric-value" style="color:${amarillos?'var(--amber)':'var(--green)'}">${amarillos}</div></div><div class="metric"><div class="metric-label">Stock bajo</div><div class="metric-value" style="color:var(--amber)">${low}</div></div><div class="metric"><div class="metric-label">Sin stock</div><div class="metric-value" style="color:var(--red)">${zero}</div></div><div class="metric"><div class="metric-label">Valor clinico</div><div class="metric-value" style="font-size:16px">${fmt(totalCost)}</div></div>`;
+  tbody.innerHTML = supplies.length ? supplies.map(s=>`<tr><td style="font-weight:500">${s.name}${s.use?`<br><span style="font-size:10px;color:var(--text3)">${s.use}</span>`:''}</td><td>${s.cat}</td><td class="mono">${s.lote||'—'}</td><td>${s.stock||0}</td><td>${s.minstock||0}</td><td style="font-size:11px">${supplyVencBadge(s.vencimiento)}</td><td>${semaforoBadge(supplySemaforo(s))}</td><td>${fmt(s.cost||0)}</td><td><button class="btn btn-sm" onclick="editSupply(${s.id})">✎</button> <button class="btn btn-sm btn-danger" onclick="deleteSupply(${s.id})">🗑</button></td></tr>`).join('') : '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text3)">Sin insumos clinicos registrados</td></tr>';
   log.innerHTML = supplyUsageLog.length ? supplyUsageLog.map(r=>`<tr><td style="font-size:11px">${r.fecha}</td><td>${r.servicio}</td><td style="font-size:11px">${r.items.map(i=>i.name+' x'+i.qty).join(', ')}</td><td style="font-weight:600">${fmt(r.clinicalCost||0)}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text3)">Sin consumo clinico registrado</td></tr>';
 }
 function openSupplyUsageModal(){
@@ -1855,6 +1916,209 @@ function confirmServiceSupplies(){
   closeModal('modal-suero-uso');
   finalizeServiceSale(pendingServicePayload, selected);
   pendingServicePayload = null;
+}
+
+// ─── INVENTARIO MEDILINK (semilla consolidada 27-05-2026) ───
+// Se agrega a `supplies` solo si el item (nombre+lote) no existe aún — idempotente.
+// El stock vivo queda en localStorage/Sheets vía saveState(); la semilla no lo pisa.
+const MEDILINK_SEED = [
+  // Box Suero materiales (Insumo)
+  {name:'Branula #20',lote:'4600002067',cat:'Insumo',stock:97,minstock:20,vencimiento:'2030-05-31',semaforo:'Verde',use:'punción venosa'},
+  {name:'Branula #22',lote:'4600002067',cat:'Insumo',stock:64,minstock:20,vencimiento:'2030-05-31',semaforo:'Verde',use:'punción venosa'},
+  {name:'Bajada de suero',lote:'4600002045',cat:'Insumo',stock:16,minstock:10,vencimiento:'2030-03-31',semaforo:'Verde',use:'infusión'},
+  {name:'Suero 250cc',lote:'75WG0914',cat:'Insumo',stock:19,minstock:10,vencimiento:'2028-07-31',semaforo:'Verde',use:'sueroterapia'},
+  {name:'Suero 500cc',lote:'75WC0260',cat:'Insumo',stock:26,minstock:10,vencimiento:'2028-03-31',semaforo:'Verde',use:'sueroterapia'},
+  {name:'Gasa 7,5x7,5',lote:'4600001460',cat:'Insumo',stock:21,minstock:10,vencimiento:'2029-04-30',semaforo:'Verde',use:'curación'},
+  {name:'Gasa 5x5',lote:'231222',cat:'Insumo',stock:177,minstock:20,vencimiento:'2029-03-31',semaforo:'Verde',use:'curación'},
+  {name:'Tela adhesiva',lote:'4600001747',cat:'Insumo',stock:6,minstock:2,vencimiento:'2029-09-30',semaforo:'Verde',use:'fijación'},
+  {name:'Jeringa 1ml',lote:'25D0601J',cat:'Insumo',stock:300,minstock:50,vencimiento:'2030-03-31',semaforo:'Verde',use:'preparación'},
+  {name:'Jeringa 3ml',lote:'4600002154',cat:'Insumo',stock:76,minstock:20,vencimiento:'2030-05-31',semaforo:'Verde',use:'preparación'},
+  {name:'Jeringa 10ml',lote:'4600002154',cat:'Insumo',stock:75,minstock:20,vencimiento:'2030-05-31',semaforo:'Verde',use:'preparación'},
+  {name:'Jeringa 20ml',lote:'4600002316',cat:'Insumo',stock:5,minstock:5,vencimiento:'2030-09-30',semaforo:'Verde',use:'preparación'},
+  {name:'Torulas de algodón',lote:'4600001851',cat:'Insumo',stock:30,minstock:20,vencimiento:'2029-10-31',semaforo:'Verde',use:'asepsia'},
+  {name:'Alcohol Pad',lote:'SH25011',cat:'Insumo',stock:55,minstock:20,vencimiento:'2030-02-28',semaforo:'Verde',use:'asepsia'},
+  {name:'Parche redondo',lote:'4600002154',cat:'Insumo',stock:102,minstock:20,vencimiento:'2030-05-30',semaforo:'Verde',use:'post punción'},
+  {name:'Llave 3 pasos',lote:'4600001301',cat:'Insumo',stock:10,minstock:10,vencimiento:'2029-04-30',semaforo:'Verde',use:'infusión múltiple'},
+  // Espacio Novage (Ampolla/Activo)
+  {name:'L CARNITINA',lote:'24OCT039',cat:'Ampolla',stock:24,minstock:5,vencimiento:'2027-10-31',semaforo:'Verde',use:'metabolismo lipídico'},
+  {name:'SILANOL',lote:'25MAR007',cat:'Ampolla',stock:10,minstock:10,vencimiento:'2028-03-26',semaforo:'Verde',use:'regeneración'},
+  {name:'M complex plus',lote:'22dic112',cat:'Ampolla',stock:7,minstock:10,vencimiento:'2026-12-31',semaforo:'Verde',use:'complejo mineral'},
+  {name:'B-complex',lote:'25JUN026',cat:'Ampolla',stock:1,minstock:1,vencimiento:'2027-06-30',semaforo:'Verde',use:'complejo B'},
+  {name:'EDTA PLUS',lote:'24AGO034',cat:'Ampolla',stock:7,minstock:1,vencimiento:'2026-08-31',semaforo:'Amarillo',use:'quelación'},
+  {name:'Vitamina C',lote:'25JUN027',cat:'Ampolla',stock:3,minstock:1,vencimiento:'2028-06-30',semaforo:'Verde',use:'antioxidante'},
+  {name:'Vitamina C',lote:'25JUL042',cat:'Ampolla',stock:3,minstock:1,vencimiento:'2028-07-31',semaforo:'Verde',use:'antioxidante'},
+  {name:'Calcio cloruro',lote:'93002280',cat:'Ampolla',stock:1,minstock:5,vencimiento:'',semaforo:'Rojo',use:'reposición calcio'},
+  {name:'Fosfatidilcolina',lote:'93009801',cat:'Activo',stock:9,minstock:5,vencimiento:'',semaforo:'Rojo',use:'lipólisis'},
+  {name:'G-PEEL (ac. retinoico 2%)',lote:'GPEEL-0126',cat:'Activo',stock:2,minstock:2,vencimiento:'2026-04-30',semaforo:'Rojo',use:'peeling'},
+  {name:'G-PEEL (glicolico 10%)',lote:'GPEEL-0126',cat:'Activo',stock:9,minstock:5,vencimiento:'2026-04-30',semaforo:'Rojo',use:'peeling'},
+  {name:'Md:complex',lote:'batch:241',cat:'Activo',stock:4,minstock:2,vencimiento:'2027-05-30',semaforo:'Verde',use:'mesoterapia'},
+  {name:'Md:complex',lote:'241',cat:'Activo',stock:2,minstock:2,vencimiento:'2027-09-30',semaforo:'Verde',use:'mesoterapia'},
+  {name:'Pink aging',lote:'25GO2',cat:'Activo',stock:3,minstock:3,vencimiento:'2028-07-13',semaforo:'Verde',use:'antiedad'},
+  {name:'Md:peel intimate',lote:'231',cat:'Activo',stock:4,minstock:2,vencimiento:'2026-03-31',semaforo:'Rojo',use:'peeling íntimo'},
+  {name:'Md:complex Firming-Regen',lote:'221',cat:'Activo',stock:3,minstock:2,vencimiento:'2027-08-31',semaforo:'Verde',use:'reafirmante'},
+  {name:'Md:complex Antiage intensive',lote:'221',cat:'Activo',stock:4,minstock:2,vencimiento:'2027-11-30',semaforo:'Verde',use:'antiedad intensivo'},
+  {name:'Carnosin Plus',lote:'25MAR007',cat:'Ampolla',stock:6,minstock:10,vencimiento:'2027-03-31',semaforo:'Verde',use:'antiglicación'},
+  {name:'5-HTP Complex',lote:'24FEB002',cat:'Ampolla',stock:15,minstock:10,vencimiento:'2028-02-29',semaforo:'Verde',use:'serotonina'},
+  {name:'H.M.B',lote:'24MAR008',cat:'Ampolla',stock:22,minstock:10,vencimiento:'2027-03-31',semaforo:'Verde',use:'masa muscular'},
+  {name:'TIMOX',lote:'24MAR009',cat:'Ampolla',stock:16,minstock:10,vencimiento:'2028-03-31',semaforo:'Verde',use:'inmunomodulador'},
+  {name:'GAG MESOGLI-K',lote:'22AGO077',cat:'Ampolla',stock:0,minstock:10,vencimiento:'2025-08-31',semaforo:'Rojo',use:'mesoterapia'},
+  {name:'L-TEANINA',lote:'22DIC117',cat:'Ampolla',stock:30,minstock:10,vencimiento:'2026-12-31',semaforo:'Verde',use:'relajación'},
+  {name:'SULFATO DE MAGNESIO',lote:'24OCT041',cat:'Ampolla',stock:5,minstock:10,vencimiento:'2026-10-31',semaforo:'Amarillo',use:'relajante muscular'},
+  {name:'AMINOACID COMPLEX',lote:'24NOV054',cat:'Ampolla',stock:10,minstock:10,vencimiento:'2027-11-30',semaforo:'Verde',use:'aminoácidos'},
+  {name:'AMINOACID COMPLEX',lote:'24SEP038',cat:'Ampolla',stock:5,minstock:10,vencimiento:'2027-09-30',semaforo:'Verde',use:'aminoácidos'},
+  {name:'GLUTATION',lote:'24NOV049',cat:'Ampolla',stock:5,minstock:10,vencimiento:'2026-11-30',semaforo:'Verde',use:'detox/antioxidante'},
+  {name:'GLUTATION',lote:'25JUL036',cat:'Ampolla',stock:8,minstock:10,vencimiento:'2027-07-31',semaforo:'Verde',use:'detox/antioxidante'},
+  {name:'L-ARGININA',lote:'24AGO033',cat:'Ampolla',stock:16,minstock:10,vencimiento:'2027-08-31',semaforo:'Verde',use:'vasodilatador'},
+];
+
+function bootstrapSupplies(){
+  let added = 0;
+  MEDILINK_SEED.forEach(seed=>{
+    const exists = supplies.find(s=>s.name===seed.name && (s.lote||'')===(seed.lote||''));
+    if(exists){
+      // completar metadatos Medilink en items ya guardados sin pisar stock vivo
+      if(exists.vencimiento===undefined) exists.vencimiento = seed.vencimiento;
+      if(exists.semaforo===undefined)    exists.semaforo    = seed.semaforo;
+      if(!exists.lote)                   exists.lote        = seed.lote;
+      return;
+    }
+    supplies.push({...seed, cost:0, id: supplies.reduce((m,s)=>Math.max(m,s.id||0),-1)+1});
+    added++;
+  });
+  if(added) saveState();
+}
+
+function supplySemaforo(s){
+  if(s.vencimiento){
+    const diff = Math.floor((new Date(s.vencimiento)-TODAY)/864e5);
+    if(!isNaN(diff) && diff < 0) return 'Rojo';
+    if(!isNaN(diff) && diff < 90) return s.semaforo==='Rojo'?'Rojo':'Amarillo';
+  } else if(s.semaforo==='Rojo') return 'Rojo';
+  return s.semaforo || 'Verde';
+}
+function semaforoBadge(sem){
+  if(sem==='Rojo') return '<span class="badge badge-out">🔴 Rojo</span>';
+  if(sem==='Amarillo') return '<span class="badge badge-low">🟡 Amarillo</span>';
+  return '<span class="badge badge-ok">🟢 Verde</span>';
+}
+function supplyVencBadge(v){
+  if(!v) return '<span class="badge badge-gray">Sin fecha</span>';
+  const diff = Math.floor((new Date(v)-TODAY)/864e5);
+  if(isNaN(diff)) return '<span class="badge badge-gray">—</span>';
+  if(diff<0) return '<span class="badge badge-vencido">⚠️ VENCIDO</span>';
+  if(diff<90) return `<span class="badge badge-proximo">⚡ ${diff}d</span>`;
+  return `<span class="badge badge-vigente">${fmtDate(v)}</span>`;
+}
+
+// ─── APLICAR SUERO A PACIENTE (descuenta kit + medicamentos automáticamente) ───
+function findSupply(name){ return supplies.find(s=>s.name===name); }
+
+function buildSueroKit(){
+  const suero = document.getElementById('as-suero').value;
+  const branula = document.getElementById('as-branula').value;
+  return [
+    {name:suero, qty:1},{name:branula, qty:1},
+    {name:'Bajada de suero', qty:1},{name:'Parche redondo', qty:1},
+    {name:'Alcohol Pad', qty:2},{name:'Torulas de algodón', qty:1},
+  ];
+}
+
+function openAplicarSuero(){
+  const meds = supplies.filter(s=>(s.cat==='Ampolla'||s.cat==='Activo') && (s.stock||0)>0);
+  document.getElementById('as-meds-list').innerHTML = meds.map(s=>
+    `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:2px 4px">
+      <input type="checkbox" value="${s.id}" onchange="previewSueroKit()" style="width:auto">
+      <span><b>${s.name}</b>${s.lote?' · lote '+s.lote:''} · stock ${s.stock||0} ${supplySemaforo(s)!=='Verde'?semaforoBadge(supplySemaforo(s)):''}</span>
+    </label>`).join('') || '<p style="font-size:12px;color:var(--text3)">Sin ampollas/activos con stock</p>';
+  document.getElementById('as-paciente').value='';
+  document.getElementById('as-notas').value='';
+  previewSueroKit();
+  document.getElementById('modal-aplicar-suero').classList.add('open');
+  setTimeout(()=>document.getElementById('as-paciente').focus(),100);
+}
+
+function previewSueroKit(){
+  const kit = buildSueroKit();
+  const meds = [...document.querySelectorAll('#as-meds-list input:checked')].map(c=>supplies.find(s=>s.id===parseInt(c.value))).filter(Boolean);
+  let html='';
+  kit.forEach(k=>{
+    const s = findSupply(k.name);
+    const ok = s && (s.stock||0)>=k.qty;
+    html += `<div style="display:flex;justify-content:space-between;font-size:12px;color:${ok?'var(--text)':'var(--red)'}"><span>${k.qty}× ${k.name}</span><span style="color:var(--text3)">stock: ${s?s.stock||0:'—'}${ok?'':' ⚠️'}</span></div>`;
+  });
+  meds.forEach(s=>{
+    html += `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--blue)"><span>1× ${s.name} (medicamento)</span><span style="color:var(--text3)">stock: ${s.stock||0}</span></div>`;
+  });
+  document.getElementById('as-preview').innerHTML = html;
+}
+
+function confirmarAplicarSuero(){
+  const paciente = document.getElementById('as-paciente').value.trim();
+  if(!paciente){ alert('Ingresa el nombre de la paciente'); return; }
+  const kit = buildSueroKit();
+  const medIds = [...document.querySelectorAll('#as-meds-list input:checked')].map(c=>parseInt(c.value));
+  const items = [];
+  const faltantes = [];
+  kit.forEach(k=>{
+    const s = findSupply(k.name);
+    if(!s || (s.stock||0) < k.qty) faltantes.push(k.name);
+  });
+  medIds.forEach(id=>{
+    const s = supplies.find(x=>x.id===id);
+    if(!s || (s.stock||0) < 1) faltantes.push(s?s.name:id);
+  });
+  if(faltantes.length && !confirm(`⚠️ Stock insuficiente en:\n${faltantes.join(', ')}\n\n¿Continuar igualmente?`)) return;
+  kit.forEach(k=>{
+    const s = findSupply(k.name);
+    if(!s) return;
+    s.stock = Math.max(0,(s.stock||0)-k.qty);
+    items.push({id:s.id, name:s.name, qty:k.qty, cost:s.cost||0, cat:s.cat});
+  });
+  medIds.forEach(id=>{
+    const s = supplies.find(x=>x.id===id);
+    if(!s) return;
+    s.stock = Math.max(0,(s.stock||0)-1);
+    items.push({id:s.id, name:s.name, qty:1, cost:s.cost||0, cat:s.cat});
+  });
+  const clinicalCost = items.reduce((a,i)=>a+i.qty*(i.cost||0),0);
+  supplyUsageLog.unshift({
+    fecha: new Date().toLocaleString('es-CL'),
+    servicio: 'Suero aplicado — ' + paciente,
+    items, clinicalCost,
+    nota: document.getElementById('as-notas').value.trim()
+  });
+  closeModal('modal-aplicar-suero');
+  saveState();          // → localStorage + Sheets automático
+  renderSupplies();
+  renderClinicalAlerts();
+  const msg=document.createElement('div');
+  msg.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.2)';
+  msg.textContent=`✅ Suero aplicado a ${paciente} — stock descontado y sincronizado`;
+  document.body.appendChild(msg);
+  setTimeout(()=>msg.remove(),4000);
+}
+
+// ─── ALERTAS CLÍNICAS (Medilink) ───
+function renderClinicalAlerts(){
+  const body = document.getElementById('alert-clinico-body');
+  if(!body) return;
+  const alertas = supplies.filter(s=>{
+    const sem = supplySemaforo(s);
+    return sem!=='Verde' || (s.stock||0)===0 || (s.stock||0)<=(s.minstock||0);
+  });
+  if(!alertas.length){
+    body.innerHTML='<p style="color:var(--text3);font-size:13px">Inventario clínico sin alertas ✅</p>';
+    return;
+  }
+  body.innerHTML = alertas.map(s=>{
+    const sem = supplySemaforo(s);
+    const rojo = sem==='Rojo' || (s.stock||0)===0;
+    const diff = s.vencimiento ? Math.floor((new Date(s.vencimiento)-TODAY)/864e5) : null;
+    const venc = diff===null ? 'Sin fecha venc.' : (diff<0 ? `VENCIDO hace ${Math.abs(diff)}d` : `vence en ${diff}d`);
+    return `<div class="alert-row ${rojo?'alert-vencido':'alert-proximo'}"><span>${rojo?'🔴':'🟡'}</span>
+      <div><b>${s.name}</b>${s.lote?` <span class="badge badge-gray" style="font-size:10px">lote ${s.lote}</span>`:''}
+      <br><small>Stock: ${s.stock||0} (mín ${s.minstock||0}) · ${venc} · ${s.cat}</small></div></div>`;
+  }).join('');
 }
 
 function openLots(id){
@@ -2326,7 +2590,7 @@ async function syncAddCierre(c){
 }
 
 function renderAll(){
-  renderInv(); renderGestionList(); renderPosGrid(); renderAlertas(); renderContab(); renderBodega(); renderPedidos(); renderServicios(); renderSupplies();
+  renderInv(); renderGestionList(); renderPosGrid(); renderAlertas(); renderClinicalAlerts(); renderContab(); renderBodega(); renderPedidos(); renderServicios(); renderSupplies();
 }
 
 // Auto-save después de cada operación crítica
@@ -2528,7 +2792,7 @@ function goPage(id,btn){
   btn.classList.add('active');
   if(id==='gestion')renderGestionList();
   if(id==='bodega')renderBodega();
-  if(id==='alertas')renderAlertas();
+  if(id==='alertas'){renderAlertas();renderClinicalAlerts();}
   if(id==='pedidos')renderPedidos();
   if(id==='servicios')renderServicios();
   if(id==='insumos')renderSupplies();
@@ -2682,6 +2946,8 @@ function applyRoleUI(){
 }
 
 // ─── INIT ───
+try{ supplies = JSON.parse(localStorage.getItem(LS_SUPPLIES)||'[]'); supplyUsageLog = JSON.parse(localStorage.getItem(LS_SUPPLY_LOG)||'[]'); }catch(e){}
+bootstrapSupplies();
 bootstrapLots();
 populateBrands();
 renderInv();
