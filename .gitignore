@@ -1,0 +1,36 @@
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Seguridad
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credenciales/
+credentials/
+tokens/
+
+# Datos sensibles
+datos_personales/
+rut/
+pacientes/
+trabajadores_identificados/
+carpetas_personales/
+documentos_confidenciales/
+fichas_clinicas/
+consentimientos_firmados/
+contratos_reales/
+liquidaciones/
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
+# Temporales
+tmp/
+temp/
+*.log
