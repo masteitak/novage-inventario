@@ -19,9 +19,21 @@
 //   Si confirman uno, avísame el nombre y ajusto ENDPOINT_INSUMOS abajo
 //   y ya queda funcionando en minutos.
 //
-// → Mientras tanto, este archivo trae LISTO el Plan B (Sección 2), que
-//   SÍ funciona hoy: importa automáticamente el archivo de inventario
-//   que exportas desde Medilink, sin necesitar el endpoint que falta.
+// TRES CAMINOS EN ESTE ARCHIVO — de más a menos automático:
+//
+//   Plan A (Sección 1) — API directa. El más limpio, pero pendiente de
+//     que Medilink confirme un endpoint de inventario (ver arriba).
+//
+//   Plan C (Sección 4) — 100% AUTOMÁTICO, RECOMENDADO. Si dentro de tu
+//     cuenta Medilink existe una opción para programar el envío del
+//     reporte de inventario por correo (revisa Administrador → Reportes,
+//     o Inventario → Exportar → "Programar envío"), actívala y este
+//     script lee ese correo solo cada hora — cero pasos manuales.
+//
+//   Plan B (Sección 2) — semi-automático de respaldo. Si Medilink NO
+//     puede enviar el reporte solo por correo, subes tú el archivo a una
+//     carpeta de Drive cuando quieras actualizar, y el script lo detecta
+//     e importa sin que hagas nada más después de subirlo.
 //
 // PASOS DE INSTALACIÓN:
 // 1. script.google.com → abre tu proyecto existente
@@ -29,7 +41,7 @@
 //    Agregar propiedad:  clave: MEDILINK_TOKEN   valor: tu token
 //    (así el token nunca queda visible en el código ni en el HTML)
 // 3. Archivo → Nuevo → Script → pega este contenido
-// 4. Ve a la SECCIÓN 2 (Plan B) para la puesta en marcha real
+// 4. Ve a la SECCIÓN 4 (Plan C) primero — es la única realmente automática
 // ═══════════════════════════════════════════════════════════════
 
 
@@ -221,4 +233,101 @@ function getMedilinkData_() {
   const values = sheet.getDataRange().getValues();
   const head = values.shift();
   return { medilink: values.map(row => Object.fromEntries(head.map((h, i) => [h, row[i]]))) };
+}
+
+
+// ═══ SECCIÓN 4: Plan C — 100% automático vía correo (SIN subir nada a mano) ═══
+// Esta es la vía recomendada si Medilink puede programar el envío del
+// reporte de inventario por correo. Revisa dentro de tu cuenta Medilink:
+// Administrador → Reportes (o Inventario → Exportar) → busca una opción
+// como "Programar envío" / "Reporte periódico" / "Enviar por correo".
+// Si existe, actívala para que llegue, por ejemplo, todos los días a
+// esta misma cuenta de Gmail (claudiaceledonzamorano@gmail.com).
+//
+// Luego dime SOLO estos dos datos y ajusto las constantes de abajo:
+//  1) el remitente exacto del correo con el reporte (ej: reportes@medilink...)
+//  2) el asunto (o parte de él) que trae ese correo
+//
+// A partir de ahí, este script revisa Gmail cada hora, encuentra el
+// correo más reciente con el adjunto, lo importa a la hoja "Medilink"
+// y marca el correo como procesado — cero pasos manuales.
+
+const MEDILINK_EMAIL_SENDER = 'notificaciones@softwaremedilink.com'; // ← ajustar si el reporte llega de otro remitente
+const MEDILINK_EMAIL_SUBJECT = 'inventario';                          // ← ajustar al asunto real del reporte
+const MEDILINK_PROCESSED_LABEL = 'Medilink/Importado';
+
+function importMedilinkFromEmail() {
+  const label = getOrCreateLabel_(MEDILINK_PROCESSED_LABEL);
+  const query = `from:(${MEDILINK_EMAIL_SENDER}) subject:(${MEDILINK_EMAIL_SUBJECT}) has:attachment -label:${MEDILINK_PROCESSED_LABEL}`;
+  const threads = GmailApp.search(query, 0, 5);
+  if (!threads.length) { Logger.log('Sin correos nuevos de inventario Medilink.'); return; }
+
+  // Tomar el mensaje más reciente entre los hilos encontrados
+  let best = null;
+  threads.forEach(t => t.getMessages().forEach(m => {
+    if (!best || m.getDate() > best.getDate()) best = m;
+  }));
+  if (!best) return;
+
+  const attachments = best.getAttachments();
+  if (!attachments.length) { Logger.log('Correo sin adjunto: %s', best.getSubject()); return; }
+
+  const filas = parseMedilinkBlob_(attachments[0]);
+  if (!filas.length) { Logger.log('No se pudieron leer filas del adjunto "%s"', attachments[0].getName()); return; }
+
+  writeMedilinkSheet_(filas);
+  threads.forEach(t => t.addLabel(label));
+  Logger.log('✅ Importados %s items desde el correo "%s" (%s)', filas.length, best.getSubject(), best.getDate());
+}
+
+function getOrCreateLabel_(name) {
+  return GmailApp.getUserLabelByName(name) || GmailApp.createLabel(name);
+}
+
+// Parseo compartido con el Plan B (Drive): TSV UTF-16LE con encabezados
+// tipo "Nombre Producto", "Lote", "Cantidad", "Fecha vencimiento", etc.
+function parseMedilinkBlob_(blob) {
+  let text;
+  try { text = blob.getDataAsString('UTF-16LE'); }
+  catch (e) { text = blob.getDataAsString('UTF-8'); }
+  text = text.replace(/^﻿/, '');
+
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split('\t').map(h => h.trim());
+  const idx = name => headers.indexOf(name);
+  const iNombre = idx('Nombre Producto');
+  if (iNombre === -1) {
+    Logger.log('⚠️ Encabezados no reconocidos: %s', headers.join(' | '));
+    return [];
+  }
+  const iLote = idx('Lote'), iCantidad = idx('Cantidad'), iVenc = idx('Fecha vencimiento'),
+        iSem = idx('Semaforización'), iBodega = idx('Bodega'), iTipo = idx('Tipo Producto'),
+        iStockSeg = idx('Stock Seguridad');
+
+  const clean = v => (v || '').replace(/^"|"$/g, '').trim();
+  const filas = [];
+  for (let r = 1; r < lines.length; r++) {
+    const cols = lines[r].split('\t');
+    const nombre = clean(cols[iNombre]);
+    if (!nombre) continue;
+    filas.push([
+      nombre, clean(cols[iLote]), parseFloat(clean(cols[iCantidad])) || 0,
+      clean(cols[iVenc]), clean(cols[iSem]), clean(cols[iBodega]), clean(cols[iTipo]),
+      parseFloat(clean(cols[iStockSeg])) || '', new Date().toISOString(),
+    ]);
+  }
+  return filas;
+}
+
+// Prueba rápida: busca el correo sin importar, para verificar que el
+// remitente/asunto configurados arriba realmente lo encuentran.
+function probeMedilinkEmail() {
+  const query = `from:(${MEDILINK_EMAIL_SENDER}) subject:(${MEDILINK_EMAIL_SUBJECT}) has:attachment`;
+  const threads = GmailApp.search(query, 0, 5);
+  Logger.log('Búsqueda: %s → %s resultado(s)', query, threads.length);
+  threads.forEach(t => t.getMessages().forEach(m =>
+    Logger.log('  · %s | %s | adjuntos: %s', m.getDate(), m.getSubject(), m.getAttachments().length)
+  ));
 }
