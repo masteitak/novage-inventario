@@ -2098,6 +2098,43 @@ function confirmarAplicarSuero(){
   setTimeout(()=>msg.remove(),4000);
 }
 
+// ─── SYNC MEDILINK API → supplies ───
+// Recibe las filas de la hoja "Medilink" (llenada por Apps Script desde la API).
+// Match por nombre+lote; actualiza stock/vencimiento/semáforo y agrega items nuevos.
+function applyMedilinkSync(rows){
+  let changed = 0;
+  rows.forEach(r=>{
+    if(!r.nombre) return;
+    const nombre = String(r.nombre).trim();
+    const lote = String(r.lote||'').trim();
+    let s = supplies.find(x=>x.name===nombre && (x.lote||'')===lote);
+    if(!s) s = supplies.find(x=>x.name===nombre && !lote);
+    if(s){
+      const qty = parseInt(r.cantidad)||0;
+      if(s.stock!==qty){ s.stock = qty; changed++; }
+      if(r.vencimiento) s.vencimiento = String(r.vencimiento).slice(0,10);
+      if(r.semaforo)    s.semaforo    = r.semaforo;
+      if(r.stock_min!=='' && r.stock_min!==undefined) s.minstock = parseInt(r.stock_min)||s.minstock;
+    } else {
+      supplies.push({
+        id: supplies.reduce((m,x)=>Math.max(m,x.id||0),-1)+1,
+        name: nombre, lote,
+        cat: /insumo/i.test(r.tipo||'') ? 'Insumo' : 'Ampolla',
+        stock: parseInt(r.cantidad)||0,
+        minstock: parseInt(r.stock_min)||2,
+        vencimiento: r.vencimiento ? String(r.vencimiento).slice(0,10) : '',
+        semaforo: r.semaforo || 'Verde',
+        cost: 0, use: ''
+      });
+      changed++;
+    }
+  });
+  if(changed){
+    try{ localStorage.setItem(LS_SUPPLIES, JSON.stringify(supplies)); }catch(e){}
+    renderSupplies(); renderClinicalAlerts();
+  }
+}
+
 // ─── ALERTAS CLÍNICAS (Medilink) ───
 function renderClinicalAlerts(){
   const body = document.getElementById('alert-clinico-body');
@@ -2527,9 +2564,14 @@ async function loadState(){
 
   // Luego cargar desde Sheets (fuente de verdad)
   setSyncStatus('loading');
-  const [rStock, rVentas, rTransfers] = await Promise.all([
-    api('getStock'), api('getVentas'), api('getTraslados')
+  const [rStock, rVentas, rTransfers, rMedilink] = await Promise.all([
+    api('getStock'), api('getVentas'), api('getTraslados'), api('getMedilink')
   ]);
+
+  // Medilink es fuente de verdad del stock clínico: reconciliar supplies
+  if(rMedilink && rMedilink.medilink && rMedilink.medilink.length){
+    applyMedilinkSync(rMedilink.medilink);
+  }
 
   if(rStock && rStock.products && rStock.products.length){
     // Sheets tiene datos → reemplazar catálogo en memoria
