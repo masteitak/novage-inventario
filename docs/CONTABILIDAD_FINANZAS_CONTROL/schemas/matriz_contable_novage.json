@@ -1,0 +1,77 @@
+{
+  "name": "MATRIZ_CONTABLE_NOVAGE",
+  "version": "1.0",
+  "required_fields": [
+    "ID",
+    "Fecha",
+    "Hora",
+    "Empresa",
+    "RUT_Empresa",
+    "Centro_Costo",
+    "Unidad_Negocio",
+    "Tipo_Operacion",
+    "Exento_Afecto",
+    "Cliente_Paciente",
+    "RUT_Cliente",
+    "Servicio",
+    "Producto",
+    "Codigo_Barra",
+    "QR_Servicio",
+    "Cantidad",
+    "Precio_Neto",
+    "IVA",
+    "Precio_Total",
+    "Costo_Directo",
+    "Costo_Indirecto",
+    "Gasto_Asociado",
+    "Margen_Bruto",
+    "Resultado",
+    "Medio_Pago",
+    "Proveedor_POS",
+    "Banco_Destino",
+    "Documento_Tributario",
+    "Numero_Documento",
+    "Estado_SII",
+    "Estado_Conciliacion",
+    "Responsable",
+    "Usuario_Creador",
+    "Observacion",
+    "Fecha_Creacion",
+    "Ultima_Modificacion",
+    "Motivo_Anulacion"
+  ],
+  "enums": {
+    "Empresa": [
+      "EMP_01_CZ_SALUD",
+      "EMP_02_DACEZ_COMERCIAL",
+      "EMP_03_SERVICIOS_MEDICOS_ISAMEDICA"
+    ],
+    "Estado_Conciliacion": [
+      "Pendiente",
+      "Conciliado",
+      "Diferencia",
+      "Revisar",
+      "Anulado"
+    ],
+    "Estado_SII": [
+      "Emitido",
+      "Pendiente",
+      "Rechazado",
+      "No_Aplica",
+      "Revisar"
+    ],
+    "Exento_Afecto": [
+      "Exento",
+      "Afecto",
+      "Mixto_Revisar"
+    ]
+  },
+  "hard_rules": [
+    "No movement without Empresa",
+    "No movement without Centro_Costo",
+    "No sale without Documento_Tributario",
+    "No sale without Medio_Pago",
+    "Never delete movements: only Anulado with Motivo_Anulacion",
+    "Do not mix companies in one operation"
+  ]
+}
