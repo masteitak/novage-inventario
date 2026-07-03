@@ -1,0 +1,39 @@
+{
+  "name": "INVENTARIO_CLINICO",
+  "version": "1.0",
+  "empresa": "EMP_01_CZ_SALUD",
+  "required_fields": [
+    "ID",
+    "Producto",
+    "Categoria",
+    "Lote",
+    "Vencimiento",
+    "Stock",
+    "Stock_Minimo",
+    "Costo_Unitario",
+    "Proveedor",
+    "Empresa",
+    "Centro_Costo",
+    "Uso_Asociado",
+    "Estado",
+    "Ultima_Actualizacion"
+  ],
+  "categorias": [
+    "sueros",
+    "vitaminas",
+    "activos",
+    "bajadas",
+    "vias",
+    "jeringas",
+    "guantes",
+    "REAS",
+    "esterilizacion",
+    "otros"
+  ],
+  "rules": [
+    "Empresa must be EMP_01_CZ_SALUD",
+    "Centro_Costo must be a CZ center",
+    "Stock adjustment requires motivo",
+    "BODEGA role cannot see sensitive clinical data"
+  ]
+}
