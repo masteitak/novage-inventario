@@ -1,0 +1,32 @@
+{
+  "name": "INVENTARIO_COMERCIAL",
+  "version": "1.0",
+  "empresa": "EMP_02_DACEZ_COMERCIAL",
+  "required_fields": [
+    "ID",
+    "Producto",
+    "Codigo_Barra",
+    "Categoria",
+    "Marca",
+    "Lote",
+    "Vencimiento",
+    "Stock",
+    "Stock_Minimo",
+    "Costo_Unitario",
+    "Precio_Venta",
+    "IVA",
+    "Margen",
+    "Proveedor",
+    "Empresa",
+    "Centro_Costo",
+    "Estado",
+    "Ultima_Actualizacion"
+  ],
+  "rules": [
+    "Empresa must be EMP_02_DACEZ_COMERCIAL",
+    "Centro_Costo must be a DZ center",
+    "Product sales are Afecto",
+    "IVA must be calculated for DACEZ sales",
+    "Stock discount must be linked to a valid sale movement"
+  ]
+}
