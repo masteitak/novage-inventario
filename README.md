@@ -10,6 +10,35 @@ NOVAGE
 
 Ordenar información, procesos, agentes, reportes y automatizaciones de forma segura, trazable y escalable.
 
+## URL pública
+
+https://masteitak.github.io/novage-inventario/
+
+## Estructura del proyecto
+
+```
+novage-inventario/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── src/
+│   ├── js/
+│   │   └── novage.js
+│   └── styles/
+│       └── novage.css
+├── 00_META/
+├── 06_AGENTES_IA/
+├── docs/
+├── index.html
+├── novage_sistema_inventario.html
+├── README.md
+└── SECURITY.md
+```
+
+## Cómo correr localmente
+
+Abre `/home/runner/work/novage-inventario/novage-inventario/index.html` en tu navegador, o abre `index.html` directamente desde la raíz del proyecto.
+
 ## Carpetas principales
 
 - 00_META
@@ -26,4 +55,3 @@ Ordenar información, procesos, agentes, reportes y automatizaciones de forma se
 ## Regla de seguridad
 
 No subir datos sensibles, documentos reales identificables, claves ni información privada sin anonimizar.
-
