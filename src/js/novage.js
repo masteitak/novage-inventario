@@ -1016,6 +1016,15 @@ function supplyVencBadge(v){
 function normalizeSupplyName(name){
   return (name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
 }
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, (char)=>({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[char]));
+}
 function findSupply(name){
   const normalized = normalizeSupplyName(name);
   return supplies.find(s=>normalizeSupplyName(s.name)===normalized);
@@ -1067,10 +1076,10 @@ function previewSueroKit(){
   kit.forEach(k=>{
     const s = findSupply(k.name);
     const ok = s && (s.stock||0)>=k.qty;
-    html += `<div style="display:flex;justify-content:space-between;font-size:12px;color:${ok?'var(--text)':'var(--red)'}"><span>${k.qty}× ${k.name}</span><span style="color:var(--text3)">stock: ${s?s.stock||0:'—'}${ok?'':' ⚠️'}</span></div>`;
+    html += `<div style="display:flex;justify-content:space-between;font-size:12px;color:${ok?'var(--text)':'var(--red)'}"><span>${k.qty}× ${escapeHtml(k.name)}</span><span style="color:var(--text3)">stock: ${s?s.stock||0:'—'}${ok?'':' ⚠️'}</span></div>`;
   });
   meds.forEach(s=>{
-    html += `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--blue)"><span>1× ${s.name} (medicamento)</span><span style="color:var(--text3)">stock: ${s.stock||0}</span></div>`;
+    html += `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--blue)"><span>1× ${escapeHtml(s.name)} (medicamento)</span><span style="color:var(--text3)">stock: ${s.stock||0}</span></div>`;
   });
   document.getElementById(ui.previewId).innerHTML = html;
 }
@@ -1199,8 +1208,8 @@ function renderClinica(){
         const rojo = sem === 'Rojo' || ((s.stock||0) === 0) || (diff !== null && !isNaN(diff) && diff < 0);
         const vencMsg = diff === null || isNaN(diff) ? ' · Sin fecha vencimiento' : (diff < 0 ? ` · ⚠️ VENCIDO hace ${Math.abs(diff)} días` : ` · vence en ${diff} días`);
         return `<div class="alert-row ${rojo?'alert-vencido':'alert-proximo'}"><span>${rojo?'🔴':'🟡'}</span>
-          <div><b>${s.name}</b> <span class="badge badge-gray">${s.cat}</span><br>
-          <small>Lote: ${s.lote||'—'} · Stock: ${s.stock||0} · Semáforo: ${sem}${vencMsg}</small></div></div>`;
+          <div><b>${escapeHtml(s.name)}</b> <span class="badge badge-gray">${escapeHtml(s.cat)}</span><br>
+          <small>Lote: ${escapeHtml(s.lote||'—')} · Stock: ${s.stock||0} · Semáforo: ${sem}${vencMsg}</small></div></div>`;
       }).join('');
     }
   }
@@ -1210,8 +1219,8 @@ function renderClinica(){
   const insumosTbody = document.getElementById('cl-insumos-tbody');
   if(insumosTbody){
     insumosTbody.innerHTML = insumos.length ? insumos.map(s=>`<tr>
-      <td style="font-weight:500;font-size:12px">${s.name}<br><span style="font-size:10px;color:var(--text3)">${s.use||''}</span></td>
-      <td class="mono">${s.lote||'—'}</td>
+      <td style="font-weight:500;font-size:12px">${escapeHtml(s.name)}<br><span style="font-size:10px;color:var(--text3)">${escapeHtml(s.use||'')}</span></td>
+      <td class="mono">${escapeHtml(s.lote||'—')}</td>
       <td style="text-align:center">${s.stock||0}</td>
       <td style="text-align:center;color:var(--text2);font-size:11px">${s.minstock||0}</td>
       <td style="font-size:11px">${supplyVencBadge(s.vencimiento)}</td>
@@ -1224,8 +1233,8 @@ function renderClinica(){
   const medsTbody = document.getElementById('cl-meds-tbody');
   if(medsTbody){
     medsTbody.innerHTML = meds.length ? meds.map(s=>`<tr>
-      <td style="font-weight:500;font-size:12px">${s.name}<br><span style="font-size:10px;color:var(--text3)">${s.use||''}</span></td>
-      <td class="mono">${s.lote||'—'}</td>
+      <td style="font-weight:500;font-size:12px">${escapeHtml(s.name)}<br><span style="font-size:10px;color:var(--text3)">${escapeHtml(s.use||'')}</span></td>
+      <td class="mono">${escapeHtml(s.lote||'—')}</td>
       <td style="text-align:center">${s.stock||0}</td>
       <td style="text-align:center;color:var(--text2);font-size:11px">${s.minstock||0}</td>
       <td style="font-size:11px">${supplyVencBadge(s.vencimiento)}</td>
@@ -1250,14 +1259,16 @@ function renderSueroLog(){
     const suero = insumos.find(item=>normalizeSupplyName(item.name).includes('suero'))?.name || '—';
     const branula = insumos.find(item=>normalizeSupplyName(item.name).includes('branula'))?.name || '—';
     const paciente = (a.servicio||'').replace(/^Suero aplicado —\s*/, '') || '—';
+    const medsHtml = meds.length ? meds.map(x=>escapeHtml(x.name)).join(', ') : '<span style="color:var(--text3)">Sin medicamentos</span>';
+    const insumosHtml = insumos.map(x=>`${x.qty}× ${escapeHtml(x.name)}`).join(', ');
     return `<tr>
       <td class="mono">#${String(sueros.length - i).padStart(3,'0')}</td>
-      <td style="font-size:11px">${a.fecha}</td>
-      <td style="font-weight:500">${paciente}</td>
-      <td><span class="badge badge-blue">${suero}</span></td>
-      <td>${branula}</td>
-      <td style="font-size:11px">${meds.length ? meds.map(x=>x.name).join(', ') : '<span style="color:var(--text3)">Sin medicamentos</span>'}</td>
-      <td style="font-size:11px">${insumos.map(x=>x.qty+'× '+x.name).join(', ')}</td>
+      <td style="font-size:11px">${escapeHtml(a.fecha)}</td>
+      <td style="font-weight:500">${escapeHtml(paciente)}</td>
+      <td><span class="badge badge-blue">${escapeHtml(suero)}</span></td>
+      <td>${escapeHtml(branula)}</td>
+      <td style="font-size:11px">${medsHtml}</td>
+      <td style="font-size:11px">${insumosHtml}</td>
     </tr>`;
   }).join('');
 }
@@ -1501,7 +1512,7 @@ function exportVentasCSV(){
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPZ_7UkYkNJj38o3rthJwK40xMR7_JS_vu04Smqhoas-AfFVFmKrbvDtqIoS4d0McB/exec';
 const WELLPLUS_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1afTrveu4wh1FJ3bFgvwHD5OIumNk9kTZ/export?format=csv&gid=1322354912';
 const WELLPLUS_SHEET_SYNC_ENABLED = true;
-let syncEnabled = API_URL !== 'https://script.google.com/macros/s/AKfycbzPZ_7UkYkNJj38o3rthJwK40xMR7_JS_vu04Smqhoas-AfFVFmKrbvDtqIoS4d0McB/exec';
+let syncEnabled = !!API_URL;
 
 // ─── CAPA DE SINCRONIZACIÓN ───
 // localStorage actúa como caché offline; Sheets es la fuente de verdad

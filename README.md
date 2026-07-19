@@ -37,7 +37,7 @@ novage-inventario/
 
 ## Cómo correr localmente
 
-Abre `/home/runner/work/novage-inventario/novage-inventario/index.html` en tu navegador, o abre `index.html` directamente desde la raíz del proyecto.
+Abre `index.html` directamente desde la raíz del proyecto en tu navegador.
 
 ## Carpetas principales
 
