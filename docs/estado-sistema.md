@@ -10,16 +10,15 @@
 - ventas de servicios
 - insumos de sueroterapia
 
-## Roles
+## Acceso
 
-- `2166`: administracion total
-- `2162`: acceso operativo restringido
+- Los PIN heredados fueron retirados por seguridad.
+- La autorización productiva debe implementarse con identidad federada, roles verificables y auditoría.
 
-## Fuente de precios
+## Fuente de datos
 
-- catalogo local en `index.html`
-- precio de venta con sincronizacion preparada desde Google Sheet
-- costo, stock, lotes y contabilidad siguen locales
+- Catálogo ficticio local para validar el flujo.
+- Google y persistencia se informan como pendientes mientras falten variables y autorización.
 
 ## Publicacion
 

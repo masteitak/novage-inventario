@@ -1,4 +1,25 @@
-# novage-inventario
+# NOVAGE · Compras e Inventario
+
+Aplicación web controlada para inventario, proveedores, órdenes de compra y trazabilidad. El panel replica la dirección visual crema/verde aprobada, sin elementos decorativos ajenos a la operación.
+
+## Controles
+
+- Los datos iniciales son ficticios y se identifican en pantalla.
+- Una orden comienza como `Solicitada`; aprobar y recibir exige acción humana.
+- La recepción actualiza inventario y genera un evento de auditoría.
+- Gmail, Drive, Sheets y persistencia se reportan desde `/api/integrations`; una variable ausente queda `Pendiente`.
+- No se almacenan PIN, secretos OAuth, pacientes ni datos clínicos en el repositorio.
+
+## Vercel
+
+El sitio es estático y usa Functions en `api/`. Las variables esperadas son nombres de configuración; nunca se versionan valores:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_DRIVE_FOLDER_ID`
+- `GOOGLE_INVENTORY_SHEET_ID` o `GOOGLE_SHEET_ID`
+- `SUPABASE_URL` y `SUPABASE_ANON_KEY` (si se autoriza persistencia compartida)
+
+Sin esas variables, la aplicación permanece en modo demostrativo local y lo indica explícitamente.
 
 Inventario clínico y comercial, stock, vencimientos, lote y alertas NOVAGE
 
@@ -9,6 +30,35 @@ NOVAGE
 ## Objetivo
 
 Ordenar información, procesos, agentes, reportes y automatizaciones de forma segura, trazable y escalable.
+
+## URL pública
+
+https://masteitak.github.io/novage-inventario/
+
+## Estructura del proyecto
+
+```
+novage-inventario/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── src/
+│   ├── js/
+│   │   └── novage.js
+│   └── styles/
+│       └── novage.css
+├── 00_META/
+├── 06_AGENTES_IA/
+├── docs/
+├── index.html
+├── novage_sistema_inventario.html
+├── README.md
+└── SECURITY.md
+```
+
+## Cómo correr localmente
+
+Abre `index.html` directamente desde la raíz del proyecto en tu navegador.
 
 ## Carpetas principales
 
@@ -26,23 +76,3 @@ Ordenar información, procesos, agentes, reportes y automatizaciones de forma se
 ## Regla de seguridad
 
 No subir datos sensibles, documentos reales identificables, claves ni información privada sin anonimizar.
-
-## Conexion NOVAGE OS y auditoria de trazabilidad
-
-Actualizado: 2026-07-27
-
-Este repositorio queda indexado desde NOVAGE OS como panel de inventario operativo.
-
-Enlaces:
-- Panel inventario: https://masteitak.github.io/novage-inventario/
-- Panel NOVAGE OS: https://novage-command-center-git-claude-nov-690095-masteitaks-projects.vercel.app/dashboard
-- Finanzas y control: https://novage-command-center-git-claude-nov-690095-masteitaks-projects.vercel.app/finanzas-control
-- Drive inventario: https://drive.google.com/drive/folders/1L9qjehJJ8j3g52r71qyTE2f_s6wRz_IH
-- Auditoria tecnica: https://github.com/masteitak/novage-command-center/blob/claude-nov-690095/docs/audits/2026-07-27_finanzas_inventario_trazabilidad.md
-
-Estado de auditoria:
-- Orden funcional: stock, lotes, vencimientos, ventas, traslados, alertas, pedidos, contabilidad y cierre diario.
-- Trazabilidad actual: local/parcial.
-- Riesgo alto: PIN visible en frontend y persistencia local como fuente maestra.
-- Falta para certificacion interna: Supabase Auth, RLS por rol, bitacora inmutable, anulacion sin borrado, evidencia Drive por movimiento y cierre conciliado con finanzas.
-- Regla de conexion: toda venta, compra, merma, traslado o ajuste debe terminar en finanzas/control con documento, responsable, evidencia y estado de conciliacion.
