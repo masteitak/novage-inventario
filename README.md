@@ -1,4 +1,25 @@
-# novage-inventario
+# NOVAGE · Compras e Inventario
+
+Aplicación web controlada para inventario, proveedores, órdenes de compra y trazabilidad. El panel replica la dirección visual crema/verde aprobada, sin elementos decorativos ajenos a la operación.
+
+## Controles
+
+- Los datos iniciales son ficticios y se identifican en pantalla.
+- Una orden comienza como `Solicitada`; aprobar y recibir exige acción humana.
+- La recepción actualiza inventario y genera un evento de auditoría.
+- Gmail, Drive, Sheets y persistencia se reportan desde `/api/integrations`; una variable ausente queda `Pendiente`.
+- No se almacenan PIN, secretos OAuth, pacientes ni datos clínicos en el repositorio.
+
+## Vercel
+
+El sitio es estático y usa Functions en `api/`. Las variables esperadas son nombres de configuración; nunca se versionan valores:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_DRIVE_FOLDER_ID`
+- `GOOGLE_INVENTORY_SHEET_ID` o `GOOGLE_SHEET_ID`
+- `SUPABASE_URL` y `SUPABASE_ANON_KEY` (si se autoriza persistencia compartida)
+
+Sin esas variables, la aplicación permanece en modo demostrativo local y lo indica explícitamente.
 
 Inventario clínico y comercial, stock, vencimientos, lote y alertas NOVAGE
 
