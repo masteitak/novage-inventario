@@ -3,7 +3,7 @@ export default function handler(_request,response){
   const integrations=[
     {name:'Vercel',configured:true,detail:'Aplicación ejecutándose en Vercel'},
     {name:'Gmail',configured:present('GOOGLE_CLIENT_ID','GMAIL_CLIENT_ID'),detail:present('GOOGLE_CLIENT_ID','GMAIL_CLIENT_ID')?'Cliente OAuth disponible; consentimiento de usuario requerido':'Falta GOOGLE_CLIENT_ID'},
-    {name:'Google Drive',configured:present('GOOGLE_CLIENT_ID','GOOGLE_DRIVE_FOLDER_ID'),detail:present('GOOGLE_CLIENT_ID','GOOGLE_DRIVE_FOLDER_ID')?'Configuración disponible; acceso sujeto a OAuth':'Falta cliente OAuth o carpeta autorizada'},
+    {name:'Google Drive',configured:present('GOOGLE_CLIENT_ID','GMAIL_CLIENT_ID'),detail:present('GOOGLE_CLIENT_ID','GMAIL_CLIENT_ID')?'OAuth de solo lectura disponible; acceso al archivo sujeto a permisos':'Falta GOOGLE_CLIENT_ID'},
     {name:'Google Sheets',configured:present('GOOGLE_SHEET_ID','GOOGLE_INVENTORY_SHEET_ID')&&present('GOOGLE_CLIENT_ID','GOOGLE_SERVICE_ACCOUNT_EMAIL'),detail:present('GOOGLE_SHEET_ID','GOOGLE_INVENTORY_SHEET_ID')?'Identificador disponible; credencial requerida':'Falta identificador de hoja'},
     {name:'Persistencia',configured:present('SUPABASE_URL','NEXT_PUBLIC_SUPABASE_URL')&&present('SUPABASE_ANON_KEY','NEXT_PUBLIC_SUPABASE_ANON_KEY'),detail:present('SUPABASE_URL','NEXT_PUBLIC_SUPABASE_URL')?'Supabase configurado; RLS debe verificarse':'Modo local demostrativo'}
   ];

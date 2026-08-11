@@ -32,7 +32,7 @@
     <header class="topbar">
       <button class="menu-btn" id="menu-btn" aria-label="Abrir menú"><i class="ph ph-list"></i></button>
       <div><strong>Gestión de Compras y Proveedores</strong><small id="breadcrumb">Resumen ejecutivo</small></div>
-      <div class="top-actions"><span class="mode-badge">DATOS FICTICIOS</span><button class="icon-btn" id="refresh-btn" title="Actualizar"><i class="ph ph-arrows-clockwise"></i></button><div class="user"><span>CC</span><div><strong>Claudia Celedón</strong><small>Aprobación humana</small></div></div></div>
+      <div class="top-actions"><span class="mode-badge" id="data-mode">DATOS FICTICIOS</span><button class="icon-btn" id="refresh-btn" title="Actualizar"><i class="ph ph-arrows-clockwise"></i></button><div class="user"><span>CC</span><div><strong>Claudia Celedón</strong><small>Aprobación humana</small></div></div></div>
     </header>
 
     <div class="content">
@@ -51,7 +51,7 @@
       </section>
 
       <section class="view" id="view-inventario">
-        <div class="section-head"><div><p class="eyebrow">EXISTENCIAS</p><h1>Inventario clínico</h1><p>Catálogo ficticio para validar el flujo. No contiene pacientes ni registros clínicos.</p></div><button class="secondary-btn" id="export-btn"><i class="ph ph-download-simple"></i>Exportar CSV</button></div>
+        <div class="section-head"><div><p class="eyebrow">EXISTENCIAS</p><h1>Inventario clínico</h1><p id="inventory-source">Catálogo ficticio para validar el flujo. No contiene pacientes ni registros clínicos.</p></div><div class="top-actions"><button class="primary-btn" id="connect-real"><i class="ph ph-google-drive-logo"></i>Conectar inventario real</button><button class="secondary-btn" id="export-btn"><i class="ph ph-download-simple"></i>Exportar CSV</button></div></div>
         <div class="toolbar"><label class="search"><i class="ph ph-magnifying-glass"></i><input id="inventory-search" placeholder="Buscar artículo, categoría o código"></label><select id="inventory-filter"><option value="all">Todos los estados</option><option value="critical">Crítico</option><option value="low">Stock bajo</option><option value="ok">Disponible</option></select></div>
         <div class="data-table" id="inventory-table"></div>
       </section>

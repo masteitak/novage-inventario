@@ -9,12 +9,15 @@ Aplicación web controlada para inventario, proveedores, órdenes de compra y tr
 - La recepción actualiza inventario y genera un evento de auditoría.
 - Gmail, Drive, Sheets y persistencia se reportan desde `/api/integrations`; una variable ausente queda `Pendiente`.
 - No se almacenan PIN, secretos OAuth, pacientes ni datos clínicos en el repositorio.
+- El inventario real se descarga directamente desde Drive tras OAuth `drive.readonly`, se procesa en memoria y no se guarda en `localStorage` ni GitHub.
+- La fuente real permanece en modo solo lectura hasta disponer de una API de escritura con autorización y auditoría.
 
 ## Vercel
 
 El sitio es estático y usa Functions en `api/`. Las variables esperadas son nombres de configuración; nunca se versionan valores:
 
 - `GOOGLE_CLIENT_ID`
+- `GOOGLE_INVENTORY_FILE_ID` (opcional; por defecto usa el archivo autorizado por Claudia)
 - `GOOGLE_DRIVE_FOLDER_ID`
 - `GOOGLE_INVENTORY_SHEET_ID` o `GOOGLE_SHEET_ID`
 - `SUPABASE_URL` y `SUPABASE_ANON_KEY` (si se autoriza persistencia compartida)
