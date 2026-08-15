@@ -1,78 +1,79 @@
 # NOVAGE · Compras e Inventario
 
-Aplicación web controlada para inventario, proveedores, órdenes de compra y trazabilidad. El panel replica la dirección visual crema/verde aprobada, sin elementos decorativos ajenos a la operación.
+Producto especializado para inventario, proveedores, órdenes de compra y trazabilidad operacional NOVAGE.
 
-## Controles
+## Responsabilidad única
 
-- Los datos iniciales son ficticios y se identifican en pantalla.
-- Una orden comienza como `Solicitada`; aprobar y recibir exige acción humana.
-- La recepción actualiza inventario y genera un evento de auditoría.
-- Gmail, Drive, Sheets y persistencia se reportan desde `/api/integrations`; una variable ausente queda `Pendiente`.
-- No se almacenan PIN, secretos OAuth, pacientes ni datos clínicos en el repositorio.
+Este repositorio responde **qué hay, qué falta, qué vence, qué se solicita, qué se aprueba y qué se recibe** en inventario/compras.
 
-## Vercel
+No es repositorio clínico, financiero general, jurídico, de RR.HH. ni de agentes productivos.
 
-El sitio es estático y usa Functions en `api/`. Las variables esperadas son nombres de configuración; nunca se versionan valores:
+## Flujo operativo preservado
+
+`acción → confirmación humana → cambio de estado → efecto autorizado → evento/auditoría`
+
+Ejemplo actual de orden:
+
+`Solicitada → Aprobada → Correo preparado → Recibida`
+
+La compra efectiva, aprobación de proveedor y ajustes físicos sensibles no deben delegarse a un agente.
+
+## Fronteras canónicas
+
+- Gobierno, políticas, Event/Action/RBAC → `masteitak/NOVAGE_OS`.
+- Action Center y agentes productivos → `masteitak/centrocomando`.
+- Laboratorio de IA → `masteitak/novage-agentes-ia`.
+- Código y lógica específica de inventario → **este repositorio**.
+- Documentos/evidencia reales → Google Drive canónico según permisos.
+- Datos estructurados compartidos → fuente operativa autorizada cuando sea definida; no asumir Drive/Sheets/Medilink como autoridad sin registry explícito.
+
+## Estado actual
+
+- App web estática con Functions en `api/`.
+- Datos demo identificados como ficticios.
+- Persistencia demostrativa local cuando no existe backend autorizado.
+- Aprobación y recepción requieren interacción humana.
+- Integraciones se reportan como configuradas/pendientes sin versionar secretos.
+
+## Variables esperadas
+
+Los nombres de variables pueden existir en configuración; sus valores nunca se versionan:
 
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_DRIVE_FOLDER_ID`
 - `GOOGLE_INVENTORY_SHEET_ID` o `GOOGLE_SHEET_ID`
-- `SUPABASE_URL` y `SUPABASE_ANON_KEY` (si se autoriza persistencia compartida)
+- `SUPABASE_URL` y `SUPABASE_ANON_KEY`, si se aprueba esa persistencia.
 
-Sin esas variables, la aplicación permanece en modo demostrativo local y lo indica explícitamente.
+No usar IDs reales hard-coded como fallback de producción.
 
-Inventario clínico y comercial, stock, vencimientos, lote y alertas NOVAGE
+## Estructura relevante
 
-## Área
-
-NOVAGE
-
-## Objetivo
-
-Ordenar información, procesos, agentes, reportes y automatizaciones de forma segura, trazable y escalable.
-
-## URL pública
-
-https://masteitak.github.io/novage-inventario/
-
-## Estructura del proyecto
-
-```
+```text
 novage-inventario/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml
-├── src/
-│   ├── js/
-│   │   └── novage.js
-│   └── styles/
-│       └── novage.css
-├── 00_META/
-├── 06_AGENTES_IA/
+├── api/
 ├── docs/
+├── src/
+│   ├── js/novage.js
+│   └── styles/novage.css
+├── 06_AGENTES_IA/          # legacy prompts de herramientas; no agentes productivos
 ├── index.html
-├── novage_sistema_inventario.html
-├── README.md
-└── SECURITY.md
+├── SECURITY.md
+├── design-qa.md
+└── vercel.json
 ```
 
-## Cómo correr localmente
+## Integración con Command Center
 
-Abre `index.html` directamente desde la raíz del proyecto en tu navegador.
+Ver `docs/COMMAND_CENTER_CONTRACT.md`. El producto debe publicar o exponer hechos no sensibles como eventos canónicos; el Command Center decide cómo convertirlos en `Action` y qué aprobaciones exige.
 
-## Carpetas principales
+## Seguridad
 
-- 00_META
-- 01_ESTRATEGIA
-- 02_PROCESOS
-- 03_DATOS
-- 04_LEGAL_COMPLIANCE
-- 05_PLANTILLAS
-- 06_AGENTES_IA
-- 07_REPORTES
-- 08_AUTOMATIZACIONES
-- 09_ARCHIVO
+- No almacenar pacientes, ficha clínica, RUT, credenciales, tokens ni secretos.
+- Una fuente real read-only no debe convertirse accidentalmente en escritura.
+- No persistir datos reales en `localStorage` por defecto.
+- Toda integración real necesita fuente autorizada, permisos mínimos, health check y auditoría.
+- No usar nombres de personas hard-coded como identidad de usuario; la identidad debe provenir de autenticación/configuración autorizada.
 
-## Regla de seguridad
+## Backlog histórico
 
-No subir datos sensibles, documentos reales identificables, claves ni información privada sin anonimizar.
+Las ramas antiguas de integración o funciones fuera de alcance se conservan como historial, pero no son fuentes canónicas. Los PR legacy fueron cerrados para evitar evolución paralela.
