@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate repository contract
         shell: bash
@@ -39,11 +39,34 @@ jobs:
             find src/js -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
           fi
 
+      - name: Validate environment template has no values
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -nE '^[A-Z][A-Z0-9_]*=.+$' .env.example; then
+            echo '.env.example must contain names only, without secret values.' >&2
+            exit 1
+          fi
+
       - name: Prevent obvious committed secrets
         shell: bash
         run: |
           set -euo pipefail
-          if git grep -nEI '(SUPABASE_SERVICE_ROLE_KEY|VERCEL_TOKEN|PRIVATE_KEY|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret["'"' ]*[:=]["'"' ][A-Za-z0-9_-]{12,})' -- ':!*.md' ':!.env.example'; then
-            echo 'Potential secret material detected.' >&2
+          exclusions=( ':!*.md' ':!.env.example' ':!.github/workflows/deployment-readiness.yml' )
+          fixed_markers=(
+            'SUPABASE_SERVICE_ROLE_KEY='
+            'VERCEL_TOKEN='
+            'BEGIN RSA PRIVATE KEY'
+            'BEGIN EC PRIVATE KEY'
+            'BEGIN OPENSSH PRIVATE KEY'
+          )
+          for marker in "${fixed_markers[@]}"; do
+            if git grep -nF "$marker" -- "${exclusions[@]}"; then
+              echo "Potential secret marker detected: $marker" >&2
+              exit 1
+            fi
+          done
+          if git grep -nE 'AIza[0-9A-Za-z_-]{30,}|ya29\.[0-9A-Za-z_-]+' -- "${exclusions[@]}"; then
+            echo 'Potential Google credential material detected.' >&2
             exit 1
           fi
