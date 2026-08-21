@@ -1,0 +1,49 @@
+name: Deployment Readiness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Validate repository contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f index.html
+          test -f vercel.json
+          test -f SECURITY.md
+          test -f .env.example
+          node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
+
+      - name: Validate serverless function syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          find api -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+
+      - name: Validate local JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d src/js ]; then
+            find src/js -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+          fi
+
+      - name: Prevent obvious committed secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -nEI '(SUPABASE_SERVICE_ROLE_KEY|VERCEL_TOKEN|PRIVATE_KEY|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret["'"' ]*[:=]["'"' ][A-Za-z0-9_-]{12,})' -- ':!*.md' ':!.env.example'; then
+            echo 'Potential secret material detected.' >&2
+            exit 1
+          fi
